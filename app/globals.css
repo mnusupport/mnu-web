@@ -1,0 +1,718 @@
+@import "tailwindcss";
+
+/* ============================================================
+   MnU design tokens
+   ============================================================
+   Extended in Day 21 toward the earthy / soft-UI direction.
+
+   The pre-existing `brand-*` / `ink-*` / `cream-*` scales are kept with
+   their ORIGINAL values on purpose: 30+ files (including the entire
+   restaurant-admin side) already consume them, and Day 21's scope is
+   customer UI only. Retuning them in place would silently restyle the
+   admin app too. New earthy tokens are added alongside instead, and the
+   customer screens are migrated onto them.
+   ============================================================ */
+
+@theme {
+  /* ---- Legacy scales (admin + shared). Do not retune. ---- */
+  --color-brand-50: #fef6f0;
+  --color-brand-100: #fde8d9;
+  --color-brand-500: #e85d30;
+  --color-brand-600: #d4451f;
+
+  --color-ink-900: #1f1b16;
+  --color-ink-700: #3d372f;
+  --color-ink-400: #8a8072;
+  --color-ink-200: #d8d1c6;
+  --color-ink-100: #ede9e3;
+
+  --color-cream-100: #faf7f2;
+
+  --color-success-500: #2f6f4e;
+  --color-danger-500: #dc2626;
+
+  /* ---- Day 21: earthy / organic customer palette ---- */
+
+  /* Canvas — the warm page background behind every customer screen. */
+  --color-canvas: #f9f5eb;
+  --color-canvas-deep: #f2ecdd;
+
+  /* Surface — cards sit white on canvas for contrast and food clarity. */
+  --color-surface: #ffffff;
+  --color-surface-muted: #faf8f3;
+
+  /* Terracotta — the primary accent: add buttons, prices, active pills. */
+  --color-terracotta-50: #fdf1ed;
+  --color-terracotta-100: #f8ddd4;
+  --color-terracotta-400: #e8917a;
+  --color-terracotta-500: #e07a5f;
+  --color-terracotta-600: #c96147;
+
+  /* Sage — secondary accent: availability, quiet confirmations, tags. */
+  --color-sage-50: #f0f2e9;
+  --color-sage-100: #dfe4cf;
+  --color-sage-500: #556b2f;
+  --color-sage-600: #445626;
+
+  /* Night — the floating bottom navigation and high-contrast surfaces. */
+  --color-night: #111111;
+  --color-night-soft: #2a2a2a;
+
+  /* Text on the earthy canvas. */
+  --color-carbon-900: #111111;
+  --color-carbon-700: #3a3733;
+  --color-carbon-400: #8b8579;
+  --color-hairline: #ece5d6;
+
+  /* ---- Radii: soft-UI scale (20-28px on cards) ---- */
+  --radius-soft: 1.25rem;   /* 20px — small cards, inputs */
+  --radius-card: 1.5rem;    /* 24px — standard product card */
+  --radius-hero: 1.75rem;   /* 28px — hero / featured surfaces */
+
+  --font-display: Georgia, 'Times New Roman', serif;
+  --color-olive: #68705b;
+  --color-terracotta-deep: #a94f39;
+}
+
+/* ============================================================
+   Soft-UI shadows
+   ============================================================
+   Deliberately restrained. True neumorphism (matched light + dark
+   inset/outset on a same-colour surface) tanks contrast and is an
+   accessibility problem on a menu people read in dim restaurants — so
+   this uses soft *elevation* on white cards over a warm canvas, which
+   reads as the same aesthetic while staying legible.
+   ============================================================ */
+@utility shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(60, 46, 28, 0.04),
+    0 8px 20px -8px rgba(60, 46, 28, 0.1);
+}
+
+@utility shadow-soft-lg {
+  box-shadow:
+    0 2px 4px rgba(60, 46, 28, 0.05),
+    0 18px 36px -14px rgba(60, 46, 28, 0.16);
+}
+
+/* The floating dark bottom nav. */
+@utility shadow-nav {
+  box-shadow: 0 10px 30px -6px rgba(17, 17, 17, 0.35);
+}
+
+/* Lifts a transparent-PNG food image off the card without a box shadow
+   (which would draw the image's rectangular bounds instead of its
+   silhouette). */
+@utility drop-food {
+  filter: drop-shadow(0 10px 14px rgba(60, 46, 28, 0.22));
+}
+
+/* Horizontal scrollers: hide the bar, keep the scrolling. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body {
+  @apply bg-cream-100 text-ink-900 antialiased;
+}
+
+/* Customer screens opt into the earthy canvas via this class rather than
+   changing `body` globally, which would also repaint the admin app. */
+.mnu-customer {
+  background-color: var(--color-canvas);
+  color: var(--color-carbon-900);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================
+   Day 23 — live UI motion primitives
+   ============================================================
+   Deliberately plain CSS keyframes/utilities, not a library: no
+   animation package was already installed (checked package.json before
+   starting), and the task is explicit that one shouldn't be added for
+   this. Every customer screen composes from these same few primitives
+   so the app reads as one consistent motion language rather than each
+   screen inventing its own. Kept short (150-320ms) and cheap
+   (opacity/transform only — never animating layout-affecting
+   properties), per the task's own performance guidance.
+   ============================================================ */
+
+@keyframes mnu-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mnu-fade-slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mnu-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* One-shot "that registered" pulse — used on the quantity control the
+   instant an item is added, and on the cart badge when its count
+   changes. Not a loop: it plays once and settles, so it reads as
+   acknowledgement rather than a distracting, continuous bounce. */
+@keyframes mnu-reveal {
+  from { opacity: 0; transform: translateY(14px) scale(.985); clip-path: inset(0 0 8% 0); }
+  to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0 0 0 0); }
+}
+
+@keyframes mnu-image-reveal {
+  from { opacity: 0; transform: scale(1.045); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes mnu-number {
+  from { opacity: .45; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mnu-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@utility animate-fade-in {
+  animation: mnu-fade-in 220ms ease-out both;
+}
+
+@utility animate-fade-slide-up {
+  animation: mnu-fade-slide-up 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-scale-in {
+  animation: mnu-scale-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-reveal { animation: mnu-reveal 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@utility animate-image-reveal { animation: mnu-image-reveal 650ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@utility animate-number { animation: mnu-number 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@utility animate-pop {
+  animation: mnu-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* A menu/diner may have "reduce motion" on for real accessibility
+   reasons, not just preference — every animation above is neutralised
+   to an instant, final-state snap rather than skipped outright (which
+   would leave staggered content at opacity:0). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-slide-up,
+  .animate-scale-in,
+  .animate-pop,
+  .animate-reveal,
+  .animate-image-reveal,
+  .animate-number {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+
+/* ============================================================
+   Day 24 — premium/editorial primitives
+   ============================================================
+   Small, additive layer on top of the Day 21 soft-UI tokens and the
+   Day 23 motion primitives — nothing above is removed or retuned. These
+   exist because the Day 21-23 system, while consistent, leaned on the
+   same "white pill/badge on a card" move everywhere (chips, badges,
+   borders), which is exactly what reads as generic/dashboard-like at
+   scale. These give Home/Menu/Item-detail a genuine editorial register
+   — a kicker label instead of another pill, a dark scrim for text over
+   photography instead of a text box beside a thumbnail — reserved for
+   the handful of places that need it (the hero, section labels),
+   not applied everywhere.
+   ============================================================ */
+
+/* Small-caps section label ("FEATURED", "MOST ORDERED") used in place
+   of a bordered/pill badge — the editorial-magazine convention for
+   introducing a section without adding another rounded chip to the
+   page. */
+@utility mnu-kicker {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Legibility scrim for large type set directly over food photography
+   (the Home hero). A flat dark overlay would flatten the photo; this
+   only darkens the lower portion where the headline/CTA sit. */
+@utility mnu-scrim {
+  background-image: linear-gradient(
+    to top,
+    rgba(17, 17, 17, 0.82) 0%,
+    rgba(17, 17, 17, 0.45) 42%,
+    rgba(17, 17, 17, 0) 75%
+  );
+}
+
+
+/* Day 25 — premium customer composition primitives. */
+@utility mnu-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.035em;
+}
+
+@utility mnu-glass {
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.mnu-customer button,
+.mnu-customer a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mnu-customer ::selection {
+  background: rgba(224,122,95,.2);
+}
+
+
+/* Day 27 premium visual system — customer surfaces inherit restaurant branding. */
+.mnu-customer {
+  min-height: 100vh;
+  background-attachment: scroll;
+  color: var(--color-carbon-900);
+  touch-action: manipulation;
+}
+.mnu-customer a, .mnu-customer button { touch-action: manipulation; }
+
+.mnu-customer[data-card-style="glass"] .mnu-home-card {
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.mnu-customer[data-card-style="soft"] .mnu-home-card {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.38), 0 18px 50px rgba(0,0,0,.10);
+}
+
+.mnu-customer[data-card-style="solid"] .mnu-home-card {
+  box-shadow: 0 14px 36px rgba(0,0,0,.08);
+}
+
+.mnu-customer .mnu-glass {
+  background: rgba(255,255,255,.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.mnu-customer .mnu-home-card,
+.mnu-customer a,
+.mnu-customer button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   Premium customer surface correction
+   The restaurant background is an atmospheric stage; readable content
+   lives on a separate warm sheet. This prevents a light background from
+   inheriting white typography (the previous implementation's biggest
+   visual failure) and keeps every customer route coherent.
+   ============================================================ */
+.mnu-customer {
+  min-height: 100svh;
+  color: var(--mnu-surface-text, #171514);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.mnu-customer .mnu-surface {
+  background: #f7f2e9;
+  color: #171514;
+}
+
+.mnu-customer .mnu-home-card {
+  transition: transform 240ms cubic-bezier(.16,1,.3,1), box-shadow 240ms ease, border-color 240ms ease;
+}
+
+.mnu-customer .mnu-home-card:active { transform: scale(.985); }
+
+.mnu-customer .mnu-display { font-feature-settings: 'liga' 1, 'kern' 1; }
+
+.mnu-menu-screen {
+  background-attachment: scroll;
+}
+
+@media (max-width: 640px) {
+  .mnu-customer { background-attachment: scroll; }
+}
+
+
+/* ============================================================
+   Day 28 — MnU "Atelier" customer system
+   ============================================================
+   Additive layer. Identity: a dark, branded stage; a warm reading
+   sheet that slides over it; the MnU ARCH (a tall arched food frame)
+   as the signature shape; serif display type against quiet sans body;
+   whitespace instead of borders. Everything derives from the
+   restaurant branding variables set by CustomerTheme / getBrandCssVars,
+   so a restaurant's own palette still drives the UI.
+   ============================================================ */
+@theme {
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+}
+
+.mnu-customer {
+  --mnu-card: color-mix(in srgb, var(--color-surface) 38%, #ffffff);
+  --mnu-line: color-mix(in srgb, var(--color-carbon-900) 10%, transparent);
+  --mnu-accent: var(--color-terracotta-500);
+  overflow-x: clip;
+}
+
+.mnu-sheet {
+  position: relative;
+  background: var(--color-surface);
+  color: var(--color-carbon-900);
+  border-radius: 36px 36px 0 0;
+  box-shadow: 0 -26px 60px -10px rgba(0, 0, 0, 0.35);
+}
+
+/* The signature shape: a tall arch over a softly rounded base. */
+.mnu-arch { border-radius: 999px 999px 28px 28px; }
+
+/* Scroll-triggered reveal (see Reveal.tsx). */
+.mnu-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 650ms cubic-bezier(0.16, 1, 0.3, 1) var(--mnu-d, 0ms),
+    transform 650ms cubic-bezier(0.16, 1, 0.3, 1) var(--mnu-d, 0ms);
+}
+.mnu-reveal.is-in { opacity: 1; transform: none; }
+
+@keyframes mnu-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.mnu-shimmer {
+  background: linear-gradient(100deg, rgba(255,255,255,.05) 30%, rgba(255,255,255,.14) 50%, rgba(255,255,255,.05) 70%);
+  background-size: 200% 100%;
+  animation: mnu-shimmer 1.6s linear infinite;
+}
+.mnu-shimmer-light {
+  background: linear-gradient(100deg, rgba(0,0,0,.04) 30%, rgba(0,0,0,.09) 50%, rgba(0,0,0,.04) 70%);
+  background-size: 200% 100%;
+  animation: mnu-shimmer 1.6s linear infinite;
+}
+
+@keyframes mnu-draw { to { stroke-dashoffset: 0; } }
+.mnu-draw { stroke-dasharray: 60; stroke-dashoffset: 60; animation: mnu-draw 520ms 220ms cubic-bezier(.65,0,.35,1) forwards; }
+
+@keyframes mnu-ring { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.mnu-ring { animation: mnu-ring 520ms cubic-bezier(.16,1,.3,1) both; }
+
+/* Cart line leaving: fades + collapses instead of vanishing. */
+.mnu-leaving {
+  opacity: 0;
+  transform: translateX(28px);
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  transition: opacity 200ms ease, transform 240ms ease, max-height 260ms ease 60ms, padding 260ms ease 60ms, margin 260ms ease 60ms;
+  overflow: hidden;
+}
+
+.mnu-fade-mask-x {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+}
+
+.mnu-snap-x { scroll-snap-type: x proximity; scroll-padding-inline: 20px; }
+.mnu-snap-x > * { scroll-snap-align: start; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mnu-reveal { opacity: 1; transform: none; transition: none; }
+  .mnu-shimmer, .mnu-shimmer-light { animation: none; }
+  .mnu-draw { animation: none; stroke-dashoffset: 0; }
+  .mnu-ring { animation: none; }
+  .mnu-leaving { transition: none; }
+}
+
+/* ============================================================
+   MnU Admin — professional restaurant SaaS layer
+   Scoped to .mnu-admin so customer QR UI remains untouched.
+   ============================================================ */
+.mnu-admin {
+  --admin-bg: #f6f4ee;
+  --admin-surface: #ffffff;
+  --admin-surface-soft: #fbfaf6;
+  --admin-border: #e7e3d9;
+  --admin-text: #24221e;
+  --admin-muted: #77736a;
+  --admin-faint: #a29d91;
+  --admin-brand: #e07a5f;
+  --admin-brand-soft: #fbebe5;
+  --admin-sage: #556b2f;
+  --admin-sidebar: #1e1d1a;
+  --admin-sidebar-muted: #a7a49a;
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+.mnu-admin, .mnu-admin * { box-sizing: border-box; }
+.mnu-admin button, .mnu-admin input, .mnu-admin select, .mnu-admin textarea { font: inherit; }
+.mnu-admin button, .mnu-admin a { -webkit-tap-highlight-color: transparent; }
+.mnu-admin-sidebar {
+  position: fixed; inset: 0 auto 0 0; z-index: 40; width: 248px; display: flex; flex-direction: column;
+  padding: 24px 14px 16px; background: var(--admin-sidebar); color: #fff; border-right: 1px solid rgba(255,255,255,.06);
+}
+.mnu-admin-brand { display:flex; align-items:center; gap:11px; padding: 0 10px 24px; }
+.mnu-admin-brand-mark { width:36px; height:36px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.14); background:#292823; color:#f0e6d8; border-radius:10px; }
+.mnu-admin-brand-name { margin:0; font-size:16px; font-weight:800; letter-spacing:-.02em; }
+.mnu-admin-brand-sub { margin:2px 0 0; color:#89867d; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+.mnu-admin-restaurant-context { margin:0 6px 24px; padding:11px 12px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.035); border-radius:10px; }
+.mnu-admin-context-label { display:block; color:#817e76; font-size:9px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+.mnu-admin-context-name { display:block; overflow:hidden; margin-top:4px; color:#f4f2ed; font-size:12px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.mnu-admin-nav-label { margin:0 11px 7px; color:#77746c; font-size:9px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+.mnu-admin-nav { display:flex; flex-direction:column; gap:3px; }
+.mnu-admin-nav-item { position:relative; display:flex; align-items:center; gap:11px; min-height:42px; padding:0 11px; color:var(--admin-sidebar-muted); text-decoration:none; border-radius:9px; font-size:13px; font-weight:600; transition:background .16s ease,color .16s ease,transform .16s ease; }
+.mnu-admin-nav-item:hover { color:#fff; background:rgba(255,255,255,.055); }
+.mnu-admin-nav-item.is-active { color:#fff; background:#302f2a; }
+.mnu-admin-nav-item.is-active::before { content:""; position:absolute; left:0; width:3px; height:20px; border-radius:0 3px 3px 0; background:var(--admin-brand); }
+.mnu-admin-count { margin-left:auto; min-width:22px; height:20px; padding:0 6px; display:grid; place-items:center; border-radius:999px; background:var(--admin-brand); color:#fff; font-size:10px; font-weight:800; }
+.mnu-admin-sidebar-footer { margin-top:auto; padding:15px 9px 0; border-top:1px solid rgba(255,255,255,.08); }
+.mnu-admin-backlink { display:inline-flex; align-items:center; gap:7px; color:#8f8c84; text-decoration:none; font-size:11px; font-weight:650; }
+.mnu-admin-backlink:hover { color:#fff; }
+.mnu-admin-shell { min-width:0; min-height:100vh; margin-left:248px; }
+.mnu-admin-superbar { min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 30px; background:#292722; color:#d7d3ca; font-size:11px; }
+.mnu-admin-superbar strong { color:#fff; }
+.mnu-admin-superbar a { color:#fff; text-decoration:none; padding:5px 9px; border:1px solid rgba(255,255,255,.16); border-radius:6px; }
+.mnu-admin-header { position:sticky; top:0; z-index:25; min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px 32px; background:rgba(255,255,255,.94); border-bottom:1px solid var(--admin-border); backdrop-filter:blur(12px); }
+.mnu-admin-header-eyebrow { margin:0 0 4px; color:var(--admin-brand); font-size:9px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+.mnu-admin-header-row { display:flex; align-items:center; gap:10px; min-width:0; }
+.mnu-admin-header h1 { margin:0; overflow:hidden; color:var(--admin-text); font-size:18px; font-weight:760; letter-spacing:-.025em; text-overflow:ellipsis; white-space:nowrap; }
+.mnu-admin-role { flex:none; padding:4px 7px; border:1px solid #ead8d1; border-radius:6px; background:var(--admin-brand-soft); color:#9b4c39; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.mnu-admin-switcher { margin-top:4px; max-width:240px; border:0; background:transparent; color:var(--admin-muted); font-size:10px; font-weight:650; outline:none; }
+.mnu-admin-user-area { display:flex; align-items:center; gap:10px; }
+.mnu-admin-user-avatar, .mnu-admin-avatar { display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#e8e3d8; color:#403d36; font-size:11px; font-weight:800; }
+.mnu-admin-user-name { margin:0; color:var(--admin-text); font-size:12px; font-weight:700; }
+.mnu-admin-user-email { margin:2px 0 0; color:var(--admin-muted); font-size:10px; }
+.mnu-admin-logout { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 10px; border:1px solid var(--admin-border); border-radius:7px; background:#fff; color:#5f5b52; font-size:11px; font-weight:700; cursor:pointer; }
+.mnu-admin-logout:hover { border-color:#d5cfc2; color:#24221e; background:#fbfaf7; }
+.mnu-admin-main { width:100%; max-width:1480px; margin:0 auto; padding:30px 32px 56px; }
+.mnu-admin-mobilebar { display:none; }
+.mnu-admin-drawer-backdrop { display:none; }
+.mnu-admin-state { min-height:100vh; display:grid; place-items:center; align-content:center; gap:10px; padding:30px; background:var(--admin-bg); color:var(--admin-muted); font-size:13px; text-align:center; }
+.mnu-admin-state-icon { width:38px; height:38px; display:grid; place-items:center; border:1px solid #eadfd6; border-radius:50%; background:#fff; color:var(--admin-brand); font-weight:800; }
+.mnu-admin-loading-mark { width:34px; height:34px; display:grid; place-items:center; border:2px solid #e4dfd5; border-top-color:var(--admin-brand); border-radius:50%; animation:mnu-admin-spin .8s linear infinite; }
+.mnu-admin-loading-mark span { width:7px; height:7px; border-radius:50%; background:var(--admin-brand); }
+.mnu-admin-link { color:#a24f3c; font-weight:700; text-decoration:none; }
+@keyframes mnu-admin-spin { to { transform:rotate(360deg); } }
+
+/* Generic admin content hierarchy. */
+.mnu-admin main h1, .mnu-admin main h2 { letter-spacing:-.025em; }
+.mnu-admin main > div:first-child, .mnu-admin main > section:first-child { min-width:0; }
+.mnu-admin .mnu-admin-pagehead { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:24px; }
+.mnu-admin .mnu-admin-eyebrow { margin:0 0 5px; color:var(--admin-brand); font-size:9px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+.mnu-admin .mnu-admin-page-title { margin:0; color:var(--admin-text); font-size:25px; line-height:1.15; font-weight:780; }
+.mnu-admin .mnu-admin-page-subtitle { margin:6px 0 0; color:var(--admin-muted); font-size:12px; line-height:1.55; }
+.mnu-admin .mnu-admin-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 14px; margin-bottom:20px; border:1px solid var(--admin-border); background:var(--admin-surface); border-radius:10px; }
+.mnu-admin .mnu-admin-search { display:flex; align-items:center; gap:9px; min-height:38px; flex:1; max-width:480px; padding:0 12px; border:1px solid var(--admin-border); border-radius:8px; background:#fff; color:var(--admin-muted); }
+.mnu-admin .mnu-admin-search input { width:100%; border:0; outline:0; color:var(--admin-text); font-size:12px; background:transparent; }
+.mnu-admin .mnu-admin-search input::placeholder { color:#aaa59b; }
+.mnu-admin .mnu-admin-primary { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:0 13px; border:1px solid #cc684f; border-radius:8px; background:var(--admin-brand); color:#fff; text-decoration:none; font-size:11px; font-weight:800; cursor:pointer; box-shadow:0 2px 0 rgba(122,56,40,.12); }
+.mnu-admin .mnu-admin-primary:hover { background:#d56d53; }
+.mnu-admin .mnu-admin-secondary { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:0 11px; border:1px solid var(--admin-border); border-radius:7px; background:#fff; color:#4e4a42; font-size:11px; font-weight:700; cursor:pointer; }
+.mnu-admin .mnu-admin-secondary:hover { background:#fbfaf7; }
+.mnu-admin .mnu-admin-danger { color:#b74e43 !important; }
+.mnu-admin .mnu-admin-panel { border:1px solid var(--admin-border); background:#fff; border-radius:10px; box-shadow:0 4px 14px rgba(35,31,24,.035); }
+.mnu-admin .mnu-admin-panel-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 16px; border-bottom:1px solid var(--admin-border); }
+.mnu-admin .mnu-admin-panel-title { margin:0; color:var(--admin-text); font-size:12px; font-weight:780; }
+.mnu-admin .mnu-admin-panel-hint { margin:3px 0 0; color:var(--admin-muted); font-size:10px; }
+.mnu-admin .mnu-admin-tablehead { display:grid; grid-template-columns:56px minmax(0,1fr) 130px 110px 150px; gap:14px; align-items:center; padding:9px 16px; background:#faf9f6; border-bottom:1px solid var(--admin-border); color:#999388; font-size:9px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+.mnu-admin .mnu-admin-itemrow { display:grid; grid-template-columns:56px minmax(0,1fr) 130px 110px 150px; gap:14px; align-items:center; padding:12px 16px; border-bottom:1px solid #efede7; }
+.mnu-admin .mnu-admin-itemrow:last-child { border-bottom:0; }
+.mnu-admin .mnu-admin-itemthumb { width:56px; height:48px; overflow:hidden; border-radius:7px; background:#f0eee8; border:1px solid #ebe7dd; }
+.mnu-admin .mnu-admin-itemthumb img { width:100%; height:100%; object-fit:cover; }
+.mnu-admin .mnu-admin-itemname { margin:0; color:var(--admin-text); font-size:12px; font-weight:750; }
+.mnu-admin .mnu-admin-itemdesc { margin:3px 0 0; max-width:620px; overflow:hidden; color:var(--admin-muted); font-size:10px; line-height:1.45; text-overflow:ellipsis; white-space:nowrap; }
+.mnu-admin .mnu-admin-price { color:var(--admin-text); font-size:12px; font-weight:800; }
+.mnu-admin .mnu-admin-status { display:inline-flex; align-items:center; width:max-content; gap:5px; padding:4px 7px; border-radius:5px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.mnu-admin .mnu-admin-status::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.mnu-admin .mnu-admin-status.is-live { background:#edf3e7; color:#5d7635; }
+.mnu-admin .mnu-admin-status.is-off { background:#f1efeb; color:#8c887f; }
+.mnu-admin .mnu-admin-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:7px; }
+.mnu-admin .mnu-admin-action { border:0; background:transparent; color:#6c685f; font-size:10px; font-weight:750; cursor:pointer; padding:3px 0; }
+.mnu-admin .mnu-admin-action:hover { color:#27241f; }
+.mnu-admin .mnu-admin-action.brand { color:#a95340; }
+.mnu-admin .mnu-admin-action.danger { color:#b54c42; }
+.mnu-admin .mnu-admin-chipbar { display:flex; gap:7px; overflow-x:auto; padding:1px 0 3px; scrollbar-width:none; }
+.mnu-admin .mnu-admin-chipbar::-webkit-scrollbar { display:none; }
+.mnu-admin .mnu-admin-chip { flex:none; min-height:30px; padding:0 10px; border:1px solid var(--admin-border); border-radius:7px; background:#fff; color:#706c64; font-size:10px; font-weight:750; cursor:pointer; }
+.mnu-admin .mnu-admin-chip.is-active { border-color:#dca493; background:#f9eee9; color:#9b4c39; }
+.mnu-admin .mnu-admin-empty { display:grid; place-items:center; padding:52px 20px; border:1px dashed #dcd7cc; background:#fff; text-align:center; }
+.mnu-admin .mnu-admin-empty-mark { width:40px; height:40px; display:grid; place-items:center; margin-bottom:11px; border:1px solid #e5e0d6; border-radius:50%; background:#faf9f6; color:#8b867d; }
+.mnu-admin .mnu-admin-empty-title { margin:0; color:var(--admin-text); font-size:13px; font-weight:760; }
+.mnu-admin .mnu-admin-empty-text { max-width:360px; margin:5px auto 0; color:var(--admin-muted); font-size:11px; line-height:1.5; }
+
+/* Reduce the legacy rounded-card language across admin pages without touching customer pages. */
+.mnu-admin .rounded-2xl { border-radius:10px !important; }
+.mnu-admin .rounded-3xl { border-radius:12px !important; }
+.mnu-admin .rounded-xl { border-radius:8px !important; }
+.mnu-admin .rounded-lg { border-radius:7px !important; }
+.mnu-admin .shadow-sm { box-shadow:0 4px 14px rgba(35,31,24,.035) !important; }
+.mnu-admin .shadow-lg { box-shadow:0 10px 28px rgba(35,31,24,.12) !important; }
+.mnu-admin .bg-white { background-color:#fff; }
+.mnu-admin .border-ink-100 { border-color:var(--admin-border); }
+.mnu-admin .text-ink-400 { color:var(--admin-muted); }
+.mnu-admin .text-ink-900 { color:var(--admin-text); }
+
+@media (max-width: 900px) {
+  .mnu-admin-sidebar { transform:translateX(-100%); transition:transform .2s ease; box-shadow:14px 0 36px rgba(0,0,0,.14); }
+  .mnu-admin-sidebar.is-open { transform:translateX(0); }
+  .mnu-admin-drawer-backdrop { display:block; position:fixed; inset:0; z-index:35; background:rgba(20,19,17,.48); backdrop-filter:blur(2px); }
+  .mnu-admin-shell { margin-left:0; }
+  .mnu-admin-mobilebar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:9px 14px; background:#fff; border-bottom:1px solid var(--admin-border); }
+  .mnu-admin-mobile-eyebrow { margin:0; color:#9b968c; font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+  .mnu-admin-mobile-title { display:block; overflow:hidden; max-width:230px; margin-top:2px; color:var(--admin-text); font-size:12px; font-weight:760; text-overflow:ellipsis; white-space:nowrap; }
+  .mnu-admin-icon-button { width:36px; height:36px; display:grid; place-items:center; border:1px solid var(--admin-border); border-radius:8px; background:#fff; color:#4b4841; }
+  .mnu-admin-mobilebar .mnu-admin-avatar { flex:none; }
+  .mnu-admin-header { display:none; }
+  .mnu-admin-main { padding:22px 16px 42px; }
+  .mnu-admin-superbar { padding:7px 14px; font-size:10px; }
+}
+@media (max-width: 700px) {
+  .mnu-admin .mnu-admin-pagehead { align-items:flex-start; flex-direction:column; margin-bottom:17px; }
+  .mnu-admin .mnu-admin-page-title { font-size:22px; }
+  .mnu-admin .mnu-admin-toolbar { align-items:stretch; flex-direction:column; padding:10px; }
+  .mnu-admin .mnu-admin-search { max-width:none; }
+  .mnu-admin .mnu-admin-primary { width:100%; }
+  .mnu-admin .mnu-admin-tablehead { display:none; }
+  .mnu-admin .mnu-admin-itemrow { grid-template-columns:48px minmax(0,1fr); gap:10px; padding:12px; }
+  .mnu-admin .mnu-admin-itemthumb { width:48px; height:48px; }
+  .mnu-admin .mnu-admin-itemrow > :nth-child(3), .mnu-admin .mnu-admin-itemrow > :nth-child(4) { grid-column:2; }
+  .mnu-admin .mnu-admin-itemrow > :nth-child(5) { grid-column:1 / -1; justify-content:flex-start; padding-top:2px; border-top:1px solid #f0eee9; }
+  .mnu-admin .mnu-admin-actions { justify-content:flex-start; }
+  .mnu-admin .mnu-admin-itemdesc { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+}
+@media (prefers-reduced-motion: reduce) { .mnu-admin * { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
+.mnu-admin-menu-summary { flex:none; color:#8b867c; font-size:10px; }
+.mnu-admin-menu-summary strong { color:#3b3832; font-weight:800; }
+.mnu-admin-menu-nav { margin:-5px 0 17px; }
+.mnu-admin-chip span { margin-left:4px; color:#aaa59c; font-size:9px; }
+.mnu-admin-chip.is-active span { color:#b46a56; }
+.mnu-admin-search-clear { flex:none; width:20px; height:20px; border:0; border-radius:50%; background:#f1eee8; color:#6f6b63; cursor:pointer; }
+.mnu-admin-inline-input { min-width:190px; border:1px solid #dcd6ca; border-radius:6px; padding:6px 8px; color:#24221e; font-size:12px; font-weight:700; outline:none; }
+.mnu-admin-inline-input:focus { border-color:#d38b78; box-shadow:0 0 0 2px rgba(224,122,95,.1); }
+.mnu-admin-category-cell { color:#777269; font-size:10px; font-weight:650; }
+.mnu-admin-thumb-fallback { width:100%; height:100%; display:grid; place-items:center; color:#aaa49a; }
+.mnu-admin-featured { display:inline-block; margin-top:5px; padding:3px 5px; border-radius:4px; background:#f9eee9; color:#9c4d3a; font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+.mnu-admin-action svg { vertical-align:-2px; display:inline-block; margin-right:3px; }
+.mnu-admin-skeleton-page { padding:12px 0; }
+.mnu-admin-skeleton-line, .mnu-admin-skeleton-panel { position:relative; overflow:hidden; background:#e9e5dc; border-radius:7px; }
+.mnu-admin-skeleton-line { width:180px; height:10px; margin-bottom:10px; }
+.mnu-admin-skeleton-line.wide { width:300px; height:25px; margin-bottom:7px; }
+.mnu-admin-skeleton-panel { height:320px; margin-top:24px; }
+.mnu-admin-skeleton-line::after, .mnu-admin-skeleton-panel::after { content:""; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation:mnu-admin-shimmer 1.2s infinite; }
+@keyframes mnu-admin-shimmer { to { transform:translateX(100%); } }
+@media (max-width:700px) { .mnu-admin-menu-summary { align-self:flex-start; } .mnu-admin-category-cell { color:#8a857b; } }
+.mnu-admin-order-summary { padding:9px 11px; border:1px solid var(--admin-border); background:#fff; border-radius:8px; color:#8b867c; font-size:10px; }
+.mnu-admin-order-summary strong { color:#5e7439; font-size:13px; }
+.mnu-admin-order-tabs { display:flex; gap:4px; padding:4px; margin-bottom:17px; border:1px solid var(--admin-border); border-radius:9px; background:#eeece6; width:max-content; max-width:100%; overflow-x:auto; }
+.mnu-admin-order-tab { display:inline-flex; align-items:center; gap:7px; min-height:31px; padding:0 10px; border:0; border-radius:6px; background:transparent; color:#777269; font-size:10px; font-weight:750; white-space:nowrap; cursor:pointer; }
+.mnu-admin-order-tab span { color:#a39e94; font-size:9px; }
+.mnu-admin-order-tab.is-active { background:#fff; color:#2f2c27; box-shadow:0 1px 4px rgba(35,31,24,.07); }
+.mnu-admin-order-tab.is-active span { color:#9e5846; }
+.mnu-admin-alert { margin-bottom:14px; padding:10px 12px; border:1px solid #efd1cb; border-radius:8px; background:#fff6f4; color:#a7493f; font-size:11px; }
+.mnu-admin-order-list { display:grid; gap:8px; }
+.mnu-admin-order-card { display:block; padding:15px 16px; border:1px solid var(--admin-border); border-radius:10px; background:#fff; color:inherit; text-decoration:none; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.mnu-admin-order-card:hover { border-color:#d9c7bc; box-shadow:0 7px 20px rgba(35,31,24,.055); transform:translateY(-1px); }
+.mnu-admin-order-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.mnu-admin-order-number { color:#28251f; font-size:13px; font-weight:800; }
+.mnu-admin-order-meta { margin:5px 0 0; color:#8b867d; font-size:10px; }
+.mnu-admin-type-badge, .mnu-admin-group-badge { display:inline-flex; align-items:center; padding:3px 6px; border-radius:4px; font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+.mnu-admin-type-badge.dinein { background:#edf2e7; color:#5e7438; }
+.mnu-admin-type-badge.takeaway { background:#f8eee7; color:#9b6049; }
+.mnu-admin-group-badge { background:#f0eef4; color:#686174; }
+.mnu-admin-order-items { display:flex; flex-wrap:wrap; gap:8px; margin-top:13px; padding-top:12px; border-top:1px solid #efede8; }
+.mnu-admin-order-item { min-width:160px; display:flex; align-items:center; gap:8px; padding-right:10px; }
+.mnu-admin-order-thumb { width:34px; height:34px; flex:none; overflow:hidden; border:1px solid #ebe7dd; border-radius:6px; background:#f3f1ec; }
+.mnu-admin-order-thumb img { width:100%; height:100%; object-fit:cover; }
+.mnu-admin-order-item p { margin:0; overflow:hidden; color:#3d3932; font-size:10px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+.mnu-admin-order-item span { color:#989288; font-size:9px; }
+.mnu-admin-more-items { align-self:center; color:#9a958c; font-size:9px; font-weight:700; }
+.mnu-admin-order-card-bottom { display:flex; align-items:center; gap:18px; margin-top:13px; padding-top:10px; border-top:1px solid #efede8; color:#969087; font-size:9px; }
+.mnu-admin-order-card-bottom strong { margin-left:auto; color:#292620; font-size:12px; }
+.mnu-admin-view-order { display:inline-flex; align-items:center; gap:4px; color:#9d5541; font-weight:800; }
+@media(max-width:700px){.mnu-admin-order-summary{width:100%}.mnu-admin-order-tabs{width:100%}.mnu-admin-order-card-top{flex-direction:column}.mnu-admin-order-item{min-width:145px}.mnu-admin-order-card-bottom{gap:9px}.mnu-admin-view-order{margin-left:auto}}
+.mnu-admin-qr-callout { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 18px; border:1px solid #e7ddd3; border-left:3px solid var(--admin-brand); border-radius:9px; background:#fffaf7; }
+.mnu-admin-qr-label { margin:0 0 3px; color:#a2604c; font-size:8px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+.mnu-admin-qr-callout h3 { margin:0; color:#302c27; font-size:13px; font-weight:800; }
+.mnu-admin-qr-callout p:not(.mnu-admin-qr-label) { margin:4px 0 0; color:#8a847a; font-size:10px; }
+.mnu-admin-count-light { padding:4px 7px; border:1px solid #e6e2d9; border-radius:5px; background:#faf9f6; color:#89847a; font-size:9px; font-weight:750; }
+@media(max-width:700px){.mnu-admin-qr-callout{align-items:flex-start; flex-direction:column}.mnu-admin-qr-callout .mnu-admin-primary{width:100%}}
+.mnu-admin-quick-icon { width:30px; height:30px; display:grid; place-items:center; border:1px solid #e5e1d8; border-radius:7px; background:#faf9f6; color:#6f6a60; font-size:10px; font-weight:850; }
+.mnu-admin-customer-head, .mnu-admin-customer-row { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1.5fr) 110px 110px; gap:18px; align-items:center; }
+.mnu-admin-customer-head { padding:9px 16px; background:#faf9f6; border-bottom:1px solid var(--admin-border); color:#999388; font-size:9px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+.mnu-admin-customer-row { padding:13px 16px; border-bottom:1px solid #efede7; text-decoration:none; color:inherit; transition:background .14s ease; }
+.mnu-admin-customer-row:last-child { border-bottom:0; }
+.mnu-admin-customer-row:hover { background:#fcfbf8; }
+.mnu-admin-customer-avatar { width:32px; height:32px; display:grid; place-items:center; flex:none; border-radius:50%; background:#ede8de; color:#655f55; font-size:10px; font-weight:850; }
+.mnu-admin-customer-row p { margin:0; color:#302d27; font-size:11px; font-weight:760; }
+.mnu-admin-customer-row span:not(.mnu-admin-customer-avatar) { color:#979187; font-size:9px; }
+.mnu-admin-customer-contact { overflow:hidden; color:#817c72; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.mnu-admin-customer-orders { color:#5d584f; font-size:10px; font-weight:700; }
+.mnu-admin-customer-orders small { display:block; margin-top:2px; color:#a19b91; font-size:9px; font-weight:500; }
+.mnu-admin-customer-spend { color:#292620; font-size:11px; font-weight:800; text-align:right; }
+.mnu-admin-customer-spend span { display:flex; align-items:center; justify-content:flex-end; gap:3px; margin-top:3px; color:#a05a45; font-size:9px; }
+@media(max-width:700px){.mnu-admin-customer-head{display:none}.mnu-admin-customer-row{grid-template-columns:1fr auto;gap:8px;padding:13px}.mnu-admin-customer-contact{grid-column:1/-1}.mnu-admin-customer-orders{grid-column:1}.mnu-admin-customer-spend{grid-column:2;grid-row:2}}
+.mnu-admin-analytics-hero { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:18px; padding:24px; border:1px solid var(--admin-border); border-radius:10px; background:#fff; box-shadow:0 4px 14px rgba(35,31,24,.035); }
+.mnu-admin-analytics-mark { width:42px; height:42px; display:grid; place-items:center; border:1px solid #dfe5d5; border-radius:9px; background:#f1f4eb; color:#61743e; }
+.mnu-admin-analytics-kicker { margin:0 0 4px; color:#6a7c49; font-size:8px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+.mnu-admin-analytics-hero h3 { margin:0; color:#2c2924; font-size:15px; font-weight:800; }
+.mnu-admin-analytics-hero p:not(.mnu-admin-analytics-kicker) { max-width:680px; margin:5px 0 0; color:#817c73; font-size:10px; line-height:1.55; }
+@media(max-width:700px){.mnu-admin-analytics-hero{grid-template-columns:auto 1fr}.mnu-admin-analytics-hero .mnu-admin-primary{grid-column:1/-1;width:100%}}
+
+/* ============================================================
+   Part 2B — premium QR menu + group order refinement
+   ============================================================ */
+.mnu-customer .mnu-tag { box-shadow: 0 8px 18px -14px rgba(36,33,29,.55); }
+.mnu-customer .mnu-primary-btn {
+  display:flex; min-height:54px; align-items:center; justify-content:center; gap:8px;
+  border:1px solid color-mix(in srgb, var(--mnu-accent) 70%, #000 10%);
+  border-radius:999px; background:var(--mnu-accent); color:#fff; padding:0 20px;
+  font-size:14px; font-weight:750; transition:transform .2s ease, filter .2s ease, opacity .2s ease;
+  box-shadow:0 14px 28px -18px color-mix(in srgb, var(--mnu-accent) 70%, #000 35%);
+}
+.mnu-customer .mnu-primary-btn:hover { filter:saturate(.95) brightness(.98); }
+.mnu-customer .mnu-primary-btn:active { transform:scale(.985); }
+.mnu-customer .mnu-secondary-btn {
+  display:flex; min-height:52px; align-items:center; justify-content:center; gap:8px;
+  border:1px solid var(--mnu-line); border-radius:999px; background:var(--color-surface);
+  color:var(--color-carbon-900); padding:0 18px; font-size:14px; font-weight:700;
+  transition:transform .2s ease, background .2s ease;
+}
+.mnu-customer .mnu-secondary-btn:active { transform:scale(.985); background:var(--color-canvas-deep); }
+.mnu-customer .mnu-code-input {
+  min-height:70px; border:1px solid var(--mnu-line); border-radius:22px; background:var(--color-canvas);
+  color:var(--color-carbon-900); outline:none; font-size:30px; font-weight:800; letter-spacing:.22em;
+  text-align:center; box-shadow:inset 0 1px 0 rgba(255,255,255,.75); transition:border-color .2s, box-shadow .2s;
+}
+.mnu-customer .mnu-code-input:focus { border-color:var(--mnu-accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--mnu-accent) 13%, transparent); }
+.mnu-customer .mnu-group-panel { box-shadow:0 16px 34px -28px rgba(36,33,29,.48); }
+.mnu-customer .mnu-group-code { box-shadow:0 22px 48px -34px rgba(36,33,29,.65); }
+.mnu-customer .mnu-group-total { background:linear-gradient(145deg, color-mix(in srgb, var(--color-terracotta-50) 88%, white), white); }
+.mnu-customer .mnu-order-card:focus-visible,
+.mnu-customer button:focus-visible,
+.mnu-customer a:focus-visible,
+.mnu-customer input:focus-visible { outline:2px solid var(--mnu-accent); outline-offset:3px; }
+
+@media (max-width: 420px) {
+  .mnu-customer .mnu-tag { padding:5px 8px; font-size:8px; letter-spacing:.1em; }
+  .mnu-customer .mnu-code-input { font-size:25px; letter-spacing:.17em; }
+}
