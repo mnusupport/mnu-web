@@ -135,7 +135,25 @@ export interface PlatformDashboard {
   recentRestaurants: { id: string; name: string; createdAt: string }[];
 }
 
+export interface CreateRestaurantPayload {
+  restaurant_name: string;
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface CreateRestaurantResult {
+  restaurant: { id: string; name: string; createdAt: string };
+  admin: { id: string; name: string; email: string };
+  membership: { restaurant_id: string; role: 'RESTAURANT_ADMIN' };
+}
+
 export const platformAdminApi = {
+  createRestaurant: (payload: CreateRestaurantPayload) =>
+    request<CreateRestaurantResult>('/super-admin/restaurants', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   dashboard: () => request<PlatformDashboard>('/super-admin/dashboard'),
   listRestaurants: (params: { page?: number; limit?: number; search?: string } = {}) => {
     const query = new URLSearchParams();
@@ -147,6 +165,15 @@ export const platformAdminApi = {
   },
   getRestaurant: (restaurantId: string) =>
     request<{ id: string; name: string; createdAt: string }>(`/super-admin/restaurants/${restaurantId}`),
+  listFeedback: (params: { page?: number; limit?: number; restaurantId?: string; rating?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.restaurantId) query.set('restaurantId', params.restaurantId);
+    if (params.rating) query.set('rating', String(params.rating));
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request<PlatformFeedbackList>(`/super-admin/feedback${suffix}`);
+  },
 };
 
 // ---- Menu (categories + items) ----
@@ -283,6 +310,35 @@ export const restaurantApi = {
     }),
 };
 
+const MENU_IMAGE_MAX_BYTES = 3.5 * 1024 * 1024;
+const MENU_IMAGE_MAX_DIMENSION = 2000;
+
+async function prepareMenuImageForUpload(file: File): Promise<File> {
+  if (file.size <= MENU_IMAGE_MAX_BYTES) return file;
+  if (typeof window === 'undefined' || typeof document === 'undefined') return file;
+
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MENU_IMAGE_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { bitmap.close(); return file; }
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  for (const quality of [0.82, 0.68, 0.55, 0.45]) {
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+    if (!blob) continue;
+    const prepared = new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.webp`, { type: 'image/webp' });
+    if (prepared.size <= MENU_IMAGE_MAX_BYTES) return prepared;
+  }
+
+  throw new Error('Photo is too large to upload. Please choose a smaller image.');
+}
+
 export const menuApi = {
   getMenu: (restaurantId: string) => request<CategoryRecord[]>(`/restaurants/${restaurantId}/menu`),
 
@@ -336,9 +392,10 @@ export const menuApi = {
   // Single image per item (this task's whole scope) — a new upload
   // always replaces whatever was there before (see
   // MenuService.uploadItemImage, which deletes the old file first).
-  uploadItemImage: (restaurantId: string, itemId: string, file: File) => {
+  uploadItemImage: async (restaurantId: string, itemId: string, file: File) => {
+    const prepared = await prepareMenuImageForUpload(file);
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', prepared, prepared.name);
     return requestFormData<MenuItemRecord>(
       `/restaurants/${restaurantId}/menu-items/${itemId}/image`,
       formData,
@@ -560,7 +617,7 @@ export interface CustomerOrderRecord {
 
 export interface CustomerOrderHistoryResponse {
   restaurant: { id: string; name: string };
-  customer: null;
+  customer: { id: string; name: string | null; maskedPhone: string | null } | null;
   orders: CustomerOrderRecord[];
 }
 
@@ -581,10 +638,12 @@ export interface AdminOrderRecord {
   customer: { id: string; customerCode: string; mobileNumber: string | null; email: string | null; name: string | null } | null;
   // Name typed by the customer at QR/takeaway checkout (null on legacy/group orders).
   customerName?: string | null;
+  customerPhoneMasked?: string | null;
   // Present only when this order came from a group lobby. A group
   // produces exactly ONE order, so this badges the row rather than
   // implying there are sibling orders to find.
   groupCode: string | null;
+  groupMembers: { participantId: string; name: string; phoneMasked: string | null }[];
 }
 
 // Day 14 — Customer Home page's "Popular" section. Real order history
@@ -662,15 +721,27 @@ export const customerRecognitionApi = {
 
 export const ordersApi = {
   // Public QR ordering. Only the customer's name is sent - no phone number.
-  create: (restaurantId: string, tableId: string | undefined, orderType: 'DINE_IN' | 'TAKEAWAY', items: OrderItemInput[], idempotencyKey: string | undefined, customerName: string) =>
+  create: (restaurantId: string, tableId: string | undefined, orderType: 'DINE_IN' | 'TAKEAWAY', items: OrderItemInput[], idempotencyKey: string | undefined, customerName: string, customerPhoneMasked?: string | null, customerRecognitionToken?: string | null) =>
     request<OrderConfirmation>(`/public/restaurants/${restaurantId}/orders`, {
       method: 'POST',
-      body: JSON.stringify({ ...(tableId ? { tableId } : {}), orderType, items, customerName, ...(idempotencyKey ? { idempotencyKey } : {}) }),
+      body: JSON.stringify({
+        ...(tableId ? { tableId } : {}),
+        orderType,
+        items,
+        customerName,
+        ...(customerPhoneMasked ? { customerPhoneMasked } : {}),
+        ...(customerRecognitionToken ? { customerRecognitionToken } : {}),
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+      }),
     }),
 
-  // Anonymous ordering deliberately has no per-customer history.
-  customerHistory: (restaurantId: string) =>
-    request<CustomerOrderHistoryResponse>(`/public/restaurants/${restaurantId}/orders`),
+  // Customer history is available only with the opaque, restaurant-scoped
+  // recognition token. The browser never sends a customerId or phone as the
+  // authorization identity.
+  customerHistory: (restaurantId: string, recognitionToken: string) =>
+    request<CustomerOrderHistoryResponse>(`/public/restaurants/${restaurantId}/orders`, {
+      headers: { 'x-customer-recognition-token': recognitionToken },
+    }),
 
   customerOrder: (restaurantId: string, orderId: string) =>
     request<CustomerOrderRecord>(`/public/restaurants/${restaurantId}/orders/${orderId}`),
@@ -699,6 +770,54 @@ export const ordersApi = {
     request<AdminOrderRecord>(`/restaurants/${restaurantId}/orders/${orderId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+    }),
+};
+
+// ---- Optional customer feedback ----
+export type FeedbackFindingEase = 'EASY' | 'MOSTLY' | 'SEARCHED' | 'COULD_NOT_FIND';
+export type FeedbackDecisionHelp = 'YES' | 'A_LITTLE' | 'NOT_REALLY' | 'KNEW';
+
+export interface SubmitFeedbackPayload {
+  orderId: string;
+  rating: number;
+  findingEase?: FeedbackFindingEase;
+  decisionHelp?: FeedbackDecisionHelp;
+  friction?: string;
+  improvement?: string;
+}
+
+export interface PlatformFeedbackRecord {
+  id: string;
+  restaurantId: string;
+  restaurantName: string;
+  orderId: string;
+  orderNumber: string;
+  rating: number;
+  findingEase: FeedbackFindingEase | null;
+  decisionHelp: FeedbackDecisionHelp | null;
+  friction: string | null;
+  improvement: string | null;
+  createdAt: string;
+}
+
+export interface PlatformFeedbackList {
+  items: PlatformFeedbackRecord[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  summary: {
+    total: number;
+    averageRating: number;
+    distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  };
+}
+
+export const feedbackApi = {
+  submit: (restaurantId: string, payload: SubmitFeedbackPayload) =>
+    request<{ id: string; submittedAt: string }>(`/public/restaurants/${restaurantId}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 };
 
@@ -794,6 +913,7 @@ export interface GroupMemberItemRecord {
 export interface GroupMemberRecord {
   participantId: string;
   displayName: string;
+  phoneMasked: string | null;
   joinedAt: string;
   isYou: boolean;
   items: GroupMemberItemRecord[];
@@ -801,6 +921,7 @@ export interface GroupMemberRecord {
 }
 
 export interface GroupPlacedOrder {
+  orderId: string;
   orderNumber: string;
   status: OrderStatus;
   subtotal: number;
@@ -827,16 +948,16 @@ export interface GroupOrderRecord {
 }
 
 export const groupOrdersApi = {
-  create: (restaurantId: string, tableId: string, participantId: string) =>
+  create: (restaurantId: string, tableId: string, participantId: string, displayName?: string, phoneMasked?: string | null) =>
     request<GroupOrderRecord>(`/public/restaurants/${restaurantId}/group-orders`, {
-      method: 'POST', body: JSON.stringify({ tableId, participantId }),
+      method: 'POST', body: JSON.stringify({ tableId, participantId, ...(displayName ? { displayName } : {}), ...(phoneMasked ? { phoneMasked } : {}) }),
     }),
-  join: (restaurantId: string, groupCode: string, participantId: string) =>
+  join: (restaurantId: string, groupCode: string, participantId: string, displayName?: string, phoneMasked?: string | null) =>
     request<GroupOrderRecord>(`/public/restaurants/${restaurantId}/group-orders/join`, {
-      method: 'POST', body: JSON.stringify({ groupCode, participantId }),
+      method: 'POST', body: JSON.stringify({ groupCode, participantId, ...(displayName ? { displayName } : {}), ...(phoneMasked ? { phoneMasked } : {}) }),
     }),
-  get: (restaurantId: string, groupCode: string) =>
-    request<GroupOrderRecord>(`/public/restaurants/${restaurantId}/group-orders/${encodeURIComponent(groupCode)}`),
+  get: (restaurantId: string, groupCode: string, participantId?: string) =>
+    request<GroupOrderRecord>(`/public/restaurants/${restaurantId}/group-orders/${encodeURIComponent(groupCode)}${participantId ? `?participantId=${encodeURIComponent(participantId)}` : ''}`),
   placeOrder: (restaurantId: string, groupCode: string, participantId: string) =>
     request<GroupPlacedOrder>(`/public/restaurants/${restaurantId}/group-orders/${encodeURIComponent(groupCode)}/place-order`, {
       method: 'POST', body: JSON.stringify({ participantId }),

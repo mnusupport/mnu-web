@@ -14,7 +14,7 @@ npm run dev                  # http://localhost:3000
 ```
 
 ## Pages
-- `/` — landing page, links to everything below
+- `/` — public landing page (`app/_landing/`) with a working sign-in form (same `/auth/login` flow and role-based redirect as `/login`) and contact details for creating an account
 - `/register` — real signup form, calls `POST /auth/register` on the backend
 - `/login` — real login form, calls `POST /auth/login`
 - `/dashboard` — proves the issued token works, via `GET /auth/me`; lists your restaurants + roles, with a "Manage menu" link per restaurant

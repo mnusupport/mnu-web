@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'MnU — Restaurant Technology Platform',
-  description: 'QR menus, table ordering, and restaurant management.',
+  description: 'MnU helps restaurants delight guests, serve faster and grow with confidence.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

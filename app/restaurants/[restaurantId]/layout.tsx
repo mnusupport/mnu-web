@@ -31,7 +31,7 @@ export default function RestaurantLayout({ children }: { children: React.ReactNo
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
 
   useEffect(() => {
-    if (!localStorage.getItem('mnu_token')) { router.push('/login'); return; }
+    if (!localStorage.getItem('mnu_token')) { router.push('/'); return; }
     authApi.me().then(async (res) => {
       setUser(res.user); setMemberships(res.memberships);
       if (res.platformRole === 'SUPER_ADMIN') {
@@ -40,7 +40,7 @@ export default function RestaurantLayout({ children }: { children: React.ReactNo
       }
     }).catch((err) => {
       if (err instanceof Error && err.message.includes('Super Admin')) { setError(err.message); return; }
-      localStorage.removeItem('mnu_token'); router.push('/login');
+      localStorage.removeItem('mnu_token'); router.push('/');
     }).finally(() => setLoading(false));
   }, [router, restaurantId]);
 
@@ -53,7 +53,7 @@ export default function RestaurantLayout({ children }: { children: React.ReactNo
   const isSuperAdmin = user?.platformRole === 'SUPER_ADMIN';
 
   const handleLogout = () => {
-    authApi.logout().finally(() => { localStorage.removeItem('mnu_token'); router.push('/login'); });
+    authApi.logout().finally(() => { localStorage.removeItem('mnu_token'); router.push('/'); });
   };
 
   if (loading) return <AdminLoading />;

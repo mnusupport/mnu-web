@@ -6,11 +6,12 @@ import Link from 'next/link';
 import { menuApi, ordersApi, type OrderConfirmation, type PublicMenu } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { getActiveGroupCode } from '@/lib/groupOrder';
-import { getCustomerNameError } from '@/lib/customerRecognition';
+import { getCustomerNameError, getRecognitionToken } from '@/lib/customerRecognition';
 import { useCustomerRecognition } from '@/lib/useCustomerRecognition';
 import { CustomerIdentifier } from '../_components/CustomerIdentifier';
 import { ItemImage } from '../_components/ItemImage';
 import { StageLayout } from '../_components/StageLayout';
+import { FeedbackForm } from '../_components/FeedbackForm';
 
 export default function OrderReviewPage() {
   const params = useParams<{ restaurantId: string }>();
@@ -83,6 +84,8 @@ export default function OrderReviewPage() {
         items.map((i) => ({ itemId: i.itemId, quantity: i.quantity })),
         getIdempotencyKey(),
         name,
+        rec.customer?.maskedPhone ?? null,
+        getRecognitionToken(restaurantId),
       );
       clearCart();
       setConfirmation(result);
@@ -122,6 +125,7 @@ export default function OrderReviewPage() {
           <div className="flex items-baseline justify-between py-5"><dt className="text-carbon-400">Total</dt><dd className="mnu-display text-[2rem] leading-none tabular-nums text-carbon-900">₹{confirmation.total}</dd></div>
         </dl>
         <Link href={`/menu/${restaurantId}/orders/${confirmation.id}${contextQuery}`} className={`${primaryBtn} mt-6`}>Track order <span aria-hidden>→</span></Link>
+        <FeedbackForm restaurantId={restaurantId} orderId={confirmation.id} orderNumber={confirmation.orderNumber} />
         <Link href={menuHref} className="mt-3 flex h-12 w-full items-center justify-center rounded-full border border-[var(--mnu-line)] text-[14px] font-semibold text-carbon-900">Back to menu</Link>
       </StageLayout>
     );

@@ -9,6 +9,7 @@ import { resolveLanding } from '@/lib/roleRouting';
 const NAV = [
   { href: '/super-admin/dashboard', label: 'Dashboard', icon: '▦' },
   { href: '/super-admin/restaurants', label: 'All Restaurants', icon: '▤' },
+  { href: '/super-admin/feedback', label: 'Customer Feedback', icon: '◔' },
 ];
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +22,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   // re-authorized server-side (JwtAuthGuard + SuperAdminGuard).
   useEffect(() => {
     if (!localStorage.getItem('mnu_token')) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
     let cancelled = false;
@@ -31,14 +32,14 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         // A signed-in Restaurant Admin who types a /super-admin URL is sent
         // back to their own panel, never shown platform pages.
         const landing = resolveLanding(res.platformRole, res.memberships);
-        router.replace(landing.kind === 'redirect' ? landing.href : '/login');
+        router.replace(landing.kind === 'redirect' ? landing.href : '/');
         return;
       }
       setUser(res.user);
     }).catch(() => {
       if (cancelled) return;
       localStorage.removeItem('mnu_token');
-      router.replace('/login');
+      router.replace('/');
     }).finally(() => {
       if (!cancelled) setLoading(false);
     });
@@ -50,7 +51,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const logout = () => {
     authApi.logout().finally(() => {
       localStorage.removeItem('mnu_token');
-      router.replace('/login');
+      router.replace('/');
     });
   };
 

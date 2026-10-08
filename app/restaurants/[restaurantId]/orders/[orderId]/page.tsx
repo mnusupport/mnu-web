@@ -16,6 +16,14 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELLED: 'Cancelled',
 };
 
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  const national = digits.startsWith('91') && digits.length >= 12 ? digits.slice(2) : digits;
+  if (national.length < 4) return phone;
+  const masked = `${national.slice(0, 2)}${'X'.repeat(Math.max(0, national.length - 4))}${national.slice(-2)}`;
+  return digits.startsWith('91') && national.length === 10 ? `+91 ${masked}` : masked;
+}
+
 export default function OrderDetailPage() {
   useRestaurantContext();
   const params = useParams<{ restaurantId: string; orderId: string }>();
@@ -86,12 +94,30 @@ export default function OrderDetailPage() {
           {!order.customer && order.customerName && (
             <p className="mt-1 text-xs text-ink-400">Customer · {order.customerName}</p>
           )}
+          {order.groupCode && order.groupMembers?.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-ink-100 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-[.12em] text-ink-400">Group members</p>
+              <div className="mt-3 space-y-2">
+                {order.groupMembers.map((member) => (
+                  <div key={member.participantId} className="flex items-center justify-between gap-3 rounded-xl bg-ink-50 px-3 py-2">
+                    <span className="text-sm font-semibold text-ink-900">{member.name}</span>
+                    <span className="text-xs text-ink-400">{member.phoneMasked ?? 'Phone not provided'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {order.customer && (
             <p className="mt-1 text-xs text-ink-400">
               Customer {order.customer.customerCode}
               {order.customer.name ? ` · ${order.customer.name}` : ''}
-              {order.customer.mobileNumber ? ` · ${order.customer.mobileNumber}` : ''}
+              {order.customer.mobileNumber ? ` · ${maskPhone(order.customer.mobileNumber)}` : ''}
               {order.customer.email ? ` · ${order.customer.email}` : ''}
+            </p>
+          )}
+          {!order.customer && order.customerName && (
+            <p className="mt-1 text-xs text-ink-400">
+              Customer · {order.customerName} · {order.customerPhoneMasked ?? 'Phone not provided'}
             </p>
           )}
 

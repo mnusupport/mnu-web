@@ -8,6 +8,7 @@ import { useCart } from '@/lib/cart';
 import { getGroupParticipantId } from '@/lib/groupParticipant';
 import { clearActiveGroupCode, setActiveGroupCode } from '@/lib/groupOrder';
 import { GroupShell } from '../_components/GroupShell';
+import { FeedbackForm } from '../../_components/FeedbackForm';
 
 // The group lobby. Shows who's at the table, what each person has added,
 // and the combined total.
@@ -53,7 +54,7 @@ export default function GroupLobbyPage() {
     const participant = getGroupParticipantId(restaurantId);
     setParticipantId(participant);
     try {
-      const data = await groupOrdersApi.get(restaurantId, groupCode);
+      const data = await groupOrdersApi.get(restaurantId, groupCode, participant);
       setGroup({ ...data, members: data.members.map((member) => ({ ...member, isYou: member.participantId === participant })) });
       setActiveGroupCode(restaurantId, data.groupCode);
     } catch (err) {
@@ -165,6 +166,8 @@ export default function GroupLobbyPage() {
           </div>
         </section>
 
+        <FeedbackForm restaurantId={restaurantId} orderId={placed.orderId} orderNumber={placed.orderNumber} />
+
         <Link
           href={menuHref}
           className="mt-4 block w-full mnu-secondary-btn block w-full"
@@ -250,6 +253,24 @@ export default function GroupLobbyPage() {
         </button>
         <p className="mt-2 text-xs text-carbon-400">Share this with everyone at your table</p>
       </div>
+
+      {/* Your identity — server-scoped to this participantId. Phone is never
+          broadcast to other members; only this browser's recognition card can
+          show the masked contact. */}
+      <section className="mt-4 mnu-group-panel rounded-[26px] border border-[var(--mnu-line)] bg-white p-5 shadow-soft">
+        <p className="mnu-kicker text-[9px] text-carbon-400">Your identity</p>
+        <p className="mt-1 text-base font-semibold text-carbon-900">{me?.displayName ?? 'Guest'}</p>
+        <p className="mt-1 text-xs text-carbon-400">Participant ID is kept private to this browser.</p>
+        {me?.displayName?.startsWith('Guest ') && (
+          <p className="mt-2 text-xs text-carbon-400">Add your name when you join the group to make the table easier to follow.</p>
+        )}
+        <Link
+          href={`/menu/${restaurantId}/group/join?code=${encodeURIComponent(groupCode.toUpperCase())}${tableNumber || tableId ? `&${new URLSearchParams({ ...(tableNumber ? { table: tableNumber } : {}), ...(tableId ? { tableId: tableId } : {}) }).toString()}` : ''}`}
+          className="mt-3 block text-center text-[13px] font-semibold text-carbon-500 underline underline-offset-4"
+        >
+          Change customer
+        </Link>
+      </section>
 
       {/* Members */}
       <section className="mt-4 mnu-group-panel mt-4 rounded-[26px] border border-[var(--mnu-line)] bg-white p-5 shadow-soft">

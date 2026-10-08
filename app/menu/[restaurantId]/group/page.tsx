@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { groupOrdersApi } from '@/lib/api';
 import { getGroupParticipantId } from '@/lib/groupParticipant';
 import { getActiveGroupCode, setActiveGroupCode } from '@/lib/groupOrder';
 import { GroupShell } from './_components/GroupShell';
+import { GroupParticipantIdentity, type GroupParticipantIdentityValue } from './_components/GroupParticipantIdentity';
 
 // Group ordering entry point: Create or Join.
 export default function GroupEntryPage() {
@@ -27,6 +28,8 @@ export default function GroupEntryPage() {
 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [identity, setIdentity] = useState<GroupParticipantIdentityValue | null>(null);
+  const handleIdentityChange = useCallback((value: GroupParticipantIdentityValue | null) => setIdentity(value), []);
 
   useEffect(() => {
     const existing = getActiveGroupCode(restaurantId);
@@ -35,6 +38,10 @@ export default function GroupEntryPage() {
   }, [restaurantId]);
 
   const handleCreate = async () => {
+    if (!identity?.name) {
+      setError('Identify yourself before creating the group.');
+      return;
+    }
     if (!tableId) {
       setError('Scan the table QR code to start a group order.');
       return;
@@ -42,7 +49,7 @@ export default function GroupEntryPage() {
     setCreating(true);
     setError(null);
     try {
-      const group = await groupOrdersApi.create(restaurantId, tableId, getGroupParticipantId(restaurantId));
+      const group = await groupOrdersApi.create(restaurantId, tableId, getGroupParticipantId(restaurantId), identity.name, identity.maskedPhone);
       setActiveGroupCode(restaurantId, group.groupCode);
       router.push(`/menu/${restaurantId}/group/${group.groupCode}${contextQuery}`);
     } catch (err) {
@@ -76,6 +83,10 @@ export default function GroupEntryPage() {
         </p>
       </div>
 
+      <div className="mt-4">
+        <GroupParticipantIdentity onChange={handleIdentityChange} />
+      </div>
+
       <>
         <div className="mt-4 space-y-3">
           {error && (
@@ -87,7 +98,7 @@ export default function GroupEntryPage() {
           <button
             type="button"
             onClick={handleCreate}
-            disabled={creating}
+            disabled={creating || !identity?.name}
             className="mnu-primary-btn w-full disabled:opacity-50"
           >
             {creating ? 'Creating group…' : 'Create Group'}

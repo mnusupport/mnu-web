@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { groupOrdersApi } from '@/lib/api';
 import { getGroupParticipantId } from '@/lib/groupParticipant';
 import { setActiveGroupCode } from '@/lib/groupOrder';
 import { GroupShell } from '../_components/GroupShell';
+import { GroupParticipantIdentity, type GroupParticipantIdentityValue } from '../_components/GroupParticipantIdentity';
 
 const CODE_LENGTH = 5;
 
@@ -25,12 +26,18 @@ export default function JoinGroupPage() {
     return str ? `?${str}` : '';
   })();
 
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => searchParams.get('code')?.toUpperCase() ?? '');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [identity, setIdentity] = useState<GroupParticipantIdentityValue | null>(null);
+  const handleIdentityChange = useCallback((value: GroupParticipantIdentityValue | null) => setIdentity(value), []);
 
 
   const handleJoin = async () => {
+    if (!identity?.name) {
+      setError('Identify yourself before joining the group.');
+      return;
+    }
     const normalized = code.trim().toUpperCase();
     if (normalized.length !== CODE_LENGTH) {
       setError(`Group codes are ${CODE_LENGTH} characters.`);
@@ -39,7 +46,7 @@ export default function JoinGroupPage() {
     setJoining(true);
     setError(null);
     try {
-      const group = await groupOrdersApi.join(restaurantId, normalized, getGroupParticipantId(restaurantId));
+      const group = await groupOrdersApi.join(restaurantId, normalized, getGroupParticipantId(restaurantId), identity.name, identity.maskedPhone);
       setActiveGroupCode(restaurantId, group.groupCode);
       router.push(`/menu/${restaurantId}/group/${group.groupCode}${contextQuery}`);
     } catch (err) {
@@ -59,6 +66,10 @@ export default function JoinGroupPage() {
       backHref={`/menu/${restaurantId}/group${contextQuery}`}
       bottomPadding="pb-12"
     >
+      <div className="mb-4">
+        <GroupParticipantIdentity onChange={handleIdentityChange} />
+      </div>
+
       <>
         <div className="rounded-[28px] border border-[var(--mnu-line)] bg-white p-6 shadow-soft">
           <h2 className="text-base font-bold text-carbon-900">Enter the group code</h2>
@@ -96,7 +107,7 @@ export default function JoinGroupPage() {
           <button
             type="button"
             onClick={handleJoin}
-            disabled={joining || code.length !== CODE_LENGTH}
+            disabled={joining || code.length !== CODE_LENGTH || !identity?.name}
             className="mnu-primary-btn mt-4 w-full disabled:opacity-40"
           >
             {joining ? 'Joining…' : 'Join Group'}

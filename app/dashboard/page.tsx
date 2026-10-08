@@ -16,7 +16,7 @@ export default function DashboardRedirectPage() {
 
   useEffect(() => {
     if (!localStorage.getItem('mnu_token')) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
     authApi
@@ -31,7 +31,7 @@ export default function DashboardRedirectPage() {
       })
       .catch(() => {
         localStorage.removeItem('mnu_token');
-        router.replace('/login');
+        router.replace('/');
       });
   }, [router]);
 
