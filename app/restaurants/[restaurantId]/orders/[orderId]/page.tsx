@@ -3,18 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ordersApi, ORDER_STATUS_TRANSITIONS, resolveImageUrl, type AdminOrderRecord, type OrderStatus } from '@/lib/api';
+import { ordersApi, resolveImageUrl, type AdminOrderRecord, type OrderStatus } from '@/lib/api';
 import { useRestaurantContext } from '../../restaurant-context';
 import { StatusBadge } from '../_components/StatusBadge';
-
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  NEW: 'New',
-  CONFIRMED: 'Confirmed',
-  PREPARING: 'Preparing',
-  READY: 'Ready',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
-};
+import { OrderStatusStepper } from '../_components/OrderStatusStepper';
 
 function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -121,31 +113,10 @@ export default function OrderDetailPage() {
             </p>
           )}
 
-          {/* Part 2: the actual status-change control — only the
-              transitions OrdersService.updateStatus will accept are
-              offered as buttons, so there's no click that can produce a
-              rejected request in normal use. */}
-          {ORDER_STATUS_TRANSITIONS[order.status].length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {ORDER_STATUS_TRANSITIONS[order.status].map((next) => (
-                <button
-                  key={next}
-                  onClick={() => changeStatus(next)}
-                  disabled={updating !== null}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
-                    next === 'CANCELLED'
-                      ? 'border border-red-200 text-red-600'
-                      : 'bg-brand-500 text-white'
-                  }`}
-                >
-                  {updating === next ? 'Saving...' : `Mark as ${STATUS_LABEL[next]}`}
-                </button>
-              ))}
-            </div>
-          )}
-          {ORDER_STATUS_TRANSITIONS[order.status].length === 0 && (
-            <p className="mt-4 text-xs text-ink-400">This order is in a final state and can&apos;t be changed further.</p>
-          )}
+          {/* Status is advanced by tapping the next step on the timeline
+              (only transitions OrdersService.updateStatus accepts are
+              tappable). The server response is the source of truth. */}
+          <OrderStatusStepper status={order.status} updating={updating} onChange={changeStatus} />
 
           <div className="mt-5 divide-y divide-ink-100 rounded-2xl border border-ink-100 bg-white">
             {order.items.map((item, i) => (

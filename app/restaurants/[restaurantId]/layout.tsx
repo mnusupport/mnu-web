@@ -75,10 +75,13 @@ export default function RestaurantLayout({ children }: { children: React.ReactNo
             <p className="mnu-admin-mobile-eyebrow">Restaurant workspace</p>
             <span className="mnu-admin-mobile-title">{membership.restaurant_name}</span>
           </div>
-          <div className="mnu-admin-avatar">{initials(user.name)}</div>
+          <div className="mnu-admin-mobilebar-actions">
+            <button onClick={handleLogout} aria-label="Logout" title="Logout" className="mnu-admin-icon-button"><IconLogout /></button>
+            <div className="mnu-admin-avatar">{initials(user.name)}</div>
+          </div>
         </div>
 
-        <Sidebar restaurantId={restaurantId} pathname={pathname} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} isSuperAdmin={isSuperAdmin} pendingOrderCount={pendingOrderCount} restaurantName={membership.restaurant_name} />
+        <Sidebar restaurantId={restaurantId} pathname={pathname} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} isSuperAdmin={isSuperAdmin} pendingOrderCount={pendingOrderCount} restaurantName={membership.restaurant_name} userName={user.name} userEmail={user.email} onLogout={handleLogout} />
 
         <div className="mnu-admin-shell">
           {isSuperAdmin && (
@@ -104,8 +107,9 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'M';
 }
 
-function Sidebar({ restaurantId, pathname, open, onClose, isSuperAdmin, pendingOrderCount, restaurantName }: {
+function Sidebar({ restaurantId, pathname, open, onClose, isSuperAdmin, pendingOrderCount, restaurantName, userName, userEmail, onLogout }: {
   restaurantId: string; pathname: string; open: boolean; onClose: () => void; isSuperAdmin: boolean; pendingOrderCount: number; restaurantName: string;
+  userName: string; userEmail: string; onLogout: () => void;
 }) {
   return (
     <>
@@ -144,6 +148,16 @@ function Sidebar({ restaurantId, pathname, open, onClose, isSuperAdmin, pendingO
           <Link href={isSuperAdmin ? '/super-admin/restaurants' : '/dashboard'} className="mnu-admin-backlink">
             <IconArrowLeft /> {isSuperAdmin ? 'Super Admin' : 'All restaurants'}
           </Link>
+          {/* The desktop header (with its Logout button) is hidden below 900px,
+              so the drawer carries the account + logout on mobile. */}
+          <div className="mnu-admin-sidebar-account">
+            <div className="mnu-admin-user-avatar">{initials(userName)}</div>
+            <div className="min-w-0">
+              <p className="mnu-admin-sidebar-account-name">{userName}</p>
+              <p className="mnu-admin-sidebar-account-email">{userEmail}</p>
+            </div>
+          </div>
+          <button onClick={onLogout} className="mnu-admin-sidebar-logout"><IconLogout /> Logout</button>
         </div>
       </aside>
     </>

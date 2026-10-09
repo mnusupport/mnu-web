@@ -506,6 +506,8 @@ body {
 .mnu-admin-logout:hover { border-color:#d5cfc2; color:#24221e; background:#fbfaf7; }
 .mnu-admin-main { width:100%; max-width:1480px; margin:0 auto; padding:30px 32px 56px; }
 .mnu-admin-mobilebar { display:none; }
+.mnu-admin-mobilebar-actions { display:flex; align-items:center; gap:8px; flex:none; }
+.mnu-admin-sidebar-account, .mnu-admin-sidebar-logout { display:none; }
 .mnu-admin-drawer-backdrop { display:none; }
 .mnu-admin-state { min-height:100vh; display:grid; place-items:center; align-content:center; gap:10px; padding:30px; background:var(--admin-bg); color:var(--admin-muted); font-size:13px; text-align:center; }
 .mnu-admin-state-icon { width:38px; height:38px; display:grid; place-items:center; border:1px solid #eadfd6; border-radius:50%; background:#fff; color:var(--admin-brand); font-weight:800; }
@@ -573,9 +575,15 @@ body {
 .mnu-admin .text-ink-900 { color:var(--admin-text); }
 
 @media (max-width: 900px) {
-  .mnu-admin-sidebar { transform:translateX(-100%); transition:transform .2s ease; box-shadow:14px 0 36px rgba(0,0,0,.14); }
+  /* Drawer starts below the sticky mobile bar (60px) so the brand and workspace card are no longer clipped behind it. */
+  .mnu-admin-sidebar { top:60px; padding-top:18px; overflow-y:auto; transform:translateX(-100%); transition:transform .2s ease; box-shadow:14px 0 36px rgba(0,0,0,.14); }
+  .mnu-admin-sidebar-account { display:flex; align-items:center; gap:10px; margin-top:14px; padding:0 2px; }
+  .mnu-admin-sidebar-account-name { margin:0; overflow:hidden; color:#f4f2ed; font-size:12px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+  .mnu-admin-sidebar-account-email { margin:2px 0 0; overflow:hidden; color:#89867d; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+  .mnu-admin-sidebar-logout { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:42px; margin-top:12px; border:1px solid rgba(255,255,255,.16); border-radius:9px; background:rgba(255,255,255,.06); color:#fff; font-size:13px; font-weight:700; cursor:pointer; }
+  .mnu-admin-sidebar-logout:hover { background:rgba(255,255,255,.12); }
   .mnu-admin-sidebar.is-open { transform:translateX(0); }
-  .mnu-admin-drawer-backdrop { display:block; position:fixed; inset:0; z-index:35; background:rgba(20,19,17,.48); backdrop-filter:blur(2px); }
+  .mnu-admin-drawer-backdrop { display:block; position:fixed; inset:60px 0 0 0; z-index:35; background:rgba(20,19,17,.48); backdrop-filter:blur(2px); }
   .mnu-admin-shell { margin-left:0; }
   .mnu-admin-mobilebar { position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:60px; padding:9px 14px; background:#fff; border-bottom:1px solid var(--admin-border); }
   .mnu-admin-mobile-eyebrow { margin:0; color:#9b968c; font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
