@@ -2,24 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CartIcon, HomeNavIcon, MenuNavIcon, SearchIcon } from './icons';
+import { CartIcon, HomeNavIcon, MenuNavIcon, OrdersNavIcon } from './icons';
+import { useMyOrders, type OrdersIndicator } from '@/lib/myOrders';
 
-export type CustomerNavTab = 'home' | 'menu' | 'search' | 'cart';
+export type CustomerNavTab = 'home' | 'menu' | 'cart' | 'orders';
 
-const TABS: CustomerNavTab[] = ['home', 'menu', 'search', 'cart'];
+const TABS: CustomerNavTab[] = ['home', 'menu', 'cart', 'orders'];
 
 interface CustomerBottomNavProps {
+  restaurantId: string;
   homeHref: string;
   menuHref: string;
-  searchHref: string;
   cartHref: string;
+  ordersHref: string;
   active: CustomerNavTab;
   cartCount: number;
   cartSubtotal: number;
 }
 
 // The one persistent, app-like navigation surface across Home, Menu,
-// and Cart (Part 3's "Home / Menu / Search / Cart", this task). A
+// Cart and Orders ("Home / Menu / Cart / Orders"). A
 // single fixed element per page — the cart summary strip and the tab
 // bar are rendered together here as one unit, specifically so a page
 // never has two competing fixed-bottom pieces (that was the reason Day
@@ -35,16 +37,17 @@ interface CustomerBottomNavProps {
 // there is still exactly ONE fixed bottom element per screen — pages
 // reserve bottom padding for its full height.
 //
-// "Search" isn't a separate page/fetch — it's the existing Menu page's
-// in-header search UI (Day 13), reached here via `searchHref`
-// (`/menu/[id]?...&openSearch=1`), which the Menu page reads on mount
-// to open search immediately. No new search logic, no duplicate menu
-// fetch.
+// Orders replaces the old Search tab. Search is still available from the
+// search bar on Home and in the Menu page header. The Orders tab shows a
+// live indicator: a blinking dot while the latest order is being
+// prepared, a blinking green dot when it is ready, and a green check
+// once it is completed (cleared when the customer opens Orders).
 export function CustomerBottomNav({
+  restaurantId,
   homeHref,
   menuHref,
-  searchHref,
   cartHref,
+  ordersHref,
   active,
   cartCount,
   cartSubtotal,
@@ -65,6 +68,7 @@ export function CustomerBottomNav({
     prevCount.current = cartCount;
   }, [cartCount]);
 
+  const { indicator } = useMyOrders(restaurantId);
   const activeIndex = TABS.indexOf(active);
 
   return (
@@ -101,7 +105,6 @@ export function CustomerBottomNav({
           )}
           <NavTab href={homeHref} label="Home" active={active === 'home'} icon={<HomeNavIcon />} />
           <NavTab href={menuHref} label="Menu" active={active === 'menu'} icon={<MenuNavIcon />} />
-          <NavTab href={searchHref} label="Search" active={active === 'search'} icon={<SearchIcon />} />
           <NavTab
             href={cartHref}
             label="Cart"
@@ -109,6 +112,13 @@ export function CustomerBottomNav({
             icon={<CartIcon />}
             badge={cartCount > 0 ? cartCount : undefined}
             badgeBump={bump}
+          />
+          <NavTab
+            href={ordersHref}
+            label="Orders"
+            active={active === 'orders'}
+            icon={<OrdersNavIcon />}
+            indicator={indicator}
           />
         </nav>
       </div>
@@ -123,6 +133,7 @@ function NavTab({
   icon,
   badge,
   badgeBump,
+  indicator = 'none',
 }: {
   href: string;
   label: string;
@@ -130,11 +141,14 @@ function NavTab({
   icon: React.ReactNode;
   badge?: number;
   badgeBump?: boolean;
+  indicator?: OrdersIndicator;
 }) {
+  const indicatorLabel =
+    indicator === 'live' ? 'order in progress' : indicator === 'ready' ? 'order ready' : indicator === 'completed' ? 'order completed' : '';
   return (
     <Link
       href={href}
-      aria-label={label}
+      aria-label={indicatorLabel ? `${label}, ${indicatorLabel}` : label}
       aria-current={active ? 'page' : undefined}
       className={`relative z-10 flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-soft text-[10px] font-semibold tracking-wide transition-all duration-200 active:scale-90 ${
         active ? 'text-white' : 'text-white/55 active:bg-surface/5'
@@ -149,6 +163,20 @@ function NavTab({
             }`}
           >
             {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+        {indicator !== 'none' && (
+          <span className="absolute -right-1.5 -top-1 flex h-3 w-3 items-center justify-center" aria-hidden="true">
+            {indicator !== 'completed' && (
+              <span className={`absolute inline-flex h-full w-full animate-ping-soft rounded-full ${indicator === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            )}
+            <span
+              className={`relative flex h-3 w-3 items-center justify-center rounded-full ring-2 ring-[#141210] ${
+                indicator === 'ready' ? 'animate-blink bg-emerald-400' : indicator === 'live' ? 'animate-blink bg-amber-400' : 'bg-emerald-500 text-[7px] font-bold leading-none text-white'
+              }`}
+            >
+              {indicator === 'completed' ? '✓' : null}
+            </span>
           </span>
         )}
       </span>

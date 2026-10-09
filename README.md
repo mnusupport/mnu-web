@@ -1,4 +1,4 @@
-# MnU — Frontend
+# Mr.wiserr — Frontend (formerly MnU)
 
 Next.js 15 (App Router) + React 19 + TypeScript + Tailwind v4.
 

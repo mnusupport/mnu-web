@@ -310,8 +310,12 @@ export const restaurantApi = {
     }),
 };
 
-const MENU_IMAGE_MAX_BYTES = 3.5 * 1024 * 1024;
-const MENU_IMAGE_MAX_DIMENSION = 2000;
+// Vercel rejects request bodies over ~4.5 MB before they reach the API, and that
+// platform error carries no CORS headers, so the browser reports it as a CORS
+// failure. Keeping photos around 1 MB also makes the Cloudinary upload fast
+// enough to finish inside a serverless function's time limit.
+const MENU_IMAGE_MAX_BYTES = 1 * 1024 * 1024;
+const MENU_IMAGE_MAX_DIMENSION = 1600;
 
 async function prepareMenuImageForUpload(file: File): Promise<File> {
   if (file.size <= MENU_IMAGE_MAX_BYTES) return file;

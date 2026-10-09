@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { authApi, platformAdminApi, type AuthUser, type Membership } from '@/lib/api';
 import { RestaurantContext } from './restaurant-context';
 import { OrderNotificationMonitor } from './_components/OrderNotificationMonitor';
+import { BrandWordmark } from '../../_components/BrandWordmark';
 
 const NAV_ITEMS = [
   { href: 'dashboard', label: 'Dashboard', icon: IconDashboard },
@@ -118,7 +119,7 @@ function Sidebar({ restaurantId, pathname, open, onClose, isSuperAdmin, pendingO
         <div className="mnu-admin-brand">
           <div className="mnu-admin-brand-mark"><IconFork /></div>
           <div className="min-w-0">
-            <p className="mnu-admin-brand-name">MnU</p>
+            <p className="mnu-admin-brand-name"><BrandWordmark tone="dark" className="text-xl" /></p>
             <p className="mnu-admin-brand-sub">Restaurant OS</p>
           </div>
         </div>

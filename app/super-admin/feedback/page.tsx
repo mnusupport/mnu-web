@@ -62,7 +62,7 @@ export default function SuperAdminFeedbackPage() {
       <div className="mb-7">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600">Product Feedback</p>
         <h2 className="mt-1 text-3xl font-bold tracking-tight text-ink-900">Customer Feedback</h2>
-        <p className="mt-1 text-sm text-ink-400">Private platform-level feedback about MnU’s menu and ordering experience.</p>
+        <p className="mt-1 text-sm text-ink-400">Private platform-level feedback about Mr.wiserr’s menu and ordering experience.</p>
       </div>
 
       {error && <p className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}

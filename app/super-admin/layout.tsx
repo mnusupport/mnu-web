@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { authApi, type AuthUser } from '@/lib/api';
 import { resolveLanding } from '@/lib/roleRouting';
+import { BrandWordmark } from '../_components/BrandWordmark';
 
 const NAV = [
   { href: '/super-admin/dashboard', label: 'Dashboard', icon: '▦' },
@@ -59,7 +60,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     <div className="min-h-screen bg-ink-900 text-white md:flex">
       <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#171513] px-4 py-6 md:block">
         <div className="mb-8 px-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-400">MnU Platform</p>
+          <BrandWordmark tone="dark" className="text-2xl" />
           <h1 className="mt-2 text-lg font-bold">Super Admin</h1>
           <p className="mt-1 text-xs text-white/45">Platform control</p>
         </div>

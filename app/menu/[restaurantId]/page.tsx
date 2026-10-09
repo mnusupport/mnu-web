@@ -151,7 +151,6 @@ export default function CustomerMenuPage() {
   const cartHref = `/menu/${restaurantId}/cart${contextQuery}`;
   const homeHref = `/menu/${restaurantId}/home${contextQuery}`;
   const menuHref = `/menu/${restaurantId}${contextQuery}`;
-  const searchHref = `/menu/${restaurantId}${contextQuery ? `${contextQuery}&` : '?'}openSearch=1`;
 
   if (error) {
     return <MenuErrorState message={error} onRetry={() => setLoadKey((k) => k + 1)} />;
@@ -238,11 +237,12 @@ export default function CustomerMenuPage() {
       </main>
 
       <CustomerBottomNav
+        restaurantId={restaurantId}
         homeHref={homeHref}
         menuHref={menuHref}
-        searchHref={searchHref}
         cartHref={cartHref}
-        active={searchOpen ? 'search' : 'menu'}
+        ordersHref={`/menu/${restaurantId}/orders${contextQuery}`}
+        active="menu"
         cartCount={count}
         cartSubtotal={subtotal}
       />

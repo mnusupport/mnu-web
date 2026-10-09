@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { menuApi, ordersApi, type OrderConfirmation, type PublicMenu } from '@/lib/api';
 import { useCart } from '@/lib/cart';
+import { rememberOrder } from '@/lib/myOrders';
 import { getActiveGroupCode } from '@/lib/groupOrder';
 import { getCustomerNameError, getRecognitionToken } from '@/lib/customerRecognition';
 import { useCustomerRecognition } from '@/lib/useCustomerRecognition';
@@ -87,6 +88,7 @@ export default function OrderReviewPage() {
         rec.customer?.maskedPhone ?? null,
         getRecognitionToken(restaurantId),
       );
+      rememberOrder(restaurantId, result.id);
       clearCart();
       setConfirmation(result);
     } catch (err) {

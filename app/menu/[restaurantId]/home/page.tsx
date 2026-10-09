@@ -186,7 +186,7 @@ export default function CustomerHomePage() {
         ) : (
           <PageTransition className="space-y-11">
             <div className="px-5">
-              <HomeHeader categoryCount={menu.categories.length} itemCount={totalItemCount} searchHref={searchHref} ordersHref={`/menu/${restaurantId}/orders${contextQuery}`} />
+              <HomeHeader categoryCount={menu.categories.length} itemCount={totalItemCount} searchHref={searchHref} />
             </div>
 
             {heroItem && (
@@ -239,10 +239,11 @@ export default function CustomerHomePage() {
       </main>
 
       <CustomerBottomNav
+        restaurantId={restaurantId}
         homeHref={homeHref}
         menuHref={menuHref}
-        searchHref={searchHref}
         cartHref={cartHref}
+        ordersHref={`/menu/${restaurantId}/orders${contextQuery}`}
         active="home"
         cartCount={count}
         cartSubtotal={subtotal}

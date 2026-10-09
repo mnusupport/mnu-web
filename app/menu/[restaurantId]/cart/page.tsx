@@ -27,7 +27,6 @@ export default function CartPage() {
   const contextQuery = qs.toString() ? `?${qs.toString()}` : '';
   const menuHref = `/menu/${restaurantId}${contextQuery}`;
   const homeHref = `/menu/${restaurantId}/home${contextQuery}`;
-  const searchHref = `/menu/${restaurantId}${contextQuery ? `${contextQuery}&` : '?'}openSearch=1`;
   const { items, setQuantity, removeItem, count, subtotal } = useCart(restaurantId);
 
   // Ids currently animating out; the real removal happens after the
@@ -51,7 +50,7 @@ export default function CartPage() {
   };
 
   const nav = (
-    <CustomerBottomNav homeHref={homeHref} menuHref={menuHref} searchHref={searchHref} cartHref={`/menu/${restaurantId}/cart${contextQuery}`} active="cart" cartCount={count} cartSubtotal={subtotal} />
+    <CustomerBottomNav restaurantId={restaurantId} homeHref={homeHref} menuHref={menuHref} cartHref={`/menu/${restaurantId}/cart${contextQuery}`} ordersHref={`/menu/${restaurantId}/orders${contextQuery}`} active="cart" cartCount={count} cartSubtotal={subtotal} />
   );
 
   const summary = items.length > 0 && (

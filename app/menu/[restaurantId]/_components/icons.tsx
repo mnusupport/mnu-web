@@ -164,3 +164,17 @@ export function MenuNavIcon({ className = 'h-5 w-5' }: { className?: string }) {
     </svg>
   );
 }
+
+export function OrdersNavIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M7 4h10a1 1 0 011 1v15l-3-1.8-3 1.8-3-1.8L6 20V5a1 1 0 011-1zM9 9h6M9 13h4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

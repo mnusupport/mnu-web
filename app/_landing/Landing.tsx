@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
+import { BrandWordmark } from '../_components/BrandWordmark';
 import { resolveLanding } from '@/lib/roleRouting';
 import { Icon, type IconName } from './Icon';
 import s from './landing.module.css';
@@ -20,7 +21,7 @@ const BENEFITS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'msg', title: 'Hear honest feedback', text: 'Understand what guests love and what could be better, straight from the people at your tables.' },
   { icon: 'target', title: 'Fewer mistakes', text: 'Reduce mix-ups and miscommunication, which means less waste and fewer unhappy moments.' },
   { icon: 'chart', title: 'See your business clearly', text: 'Get a clearer picture of what is working so you can plan your menu and your days with confidence.' },
-  { icon: 'layers', title: 'Grow with ease', text: 'Whether you run one restaurant or many, MnU helps you stay organised as you grow.' },
+  { icon: 'layers', title: 'Grow with ease', text: 'Whether you run one restaurant or many, Mr.wiserr helps you stay organised as you grow.' },
 ];
 
 export default function Landing() {
@@ -83,9 +84,8 @@ export default function Landing() {
     <div className={s.page}>
       <header className={s.header}>
         <div className={`${s.wrap} ${s.nav}`}>
-          <a href="#top" className={s.logo} aria-label="MnU home">
-            <Image src="/mnu-logo.png" alt="MnU logo" width={300} height={164} priority />
-            <span>MnU</span>
+          <a href="#top" className={s.logo} aria-label="Mr.wiserr home">
+            <Image src="/mrwiserr-logo.png" alt="Mr.wiserr" width={1269} height={300} priority />
           </a>
           <nav className={s.links}>
             <a href="#about">About</a>
@@ -102,7 +102,7 @@ export default function Landing() {
             <div>
               <span className={s.pill}><Icon name="shield" className={s.i} />Trusted restaurant technology</span>
               <h1>Give every guest a <em>better dining</em> experience.</h1>
-              <p className={s.lead}>MnU is a restaurant technology company helping restaurants serve guests faster, hear what they really think, and grow with confidence.</p>
+              <p className={s.lead}>Mr.wiserr is a restaurant technology company helping restaurants serve guests faster, hear what they really think, and grow with confidence.</p>
               <div className={s.cta}>
                 <a href="#signin" className={s.btn}>Sign in <Icon name="arrow" className={s.i} /></a>
               </div>
@@ -113,7 +113,7 @@ export default function Landing() {
               </div>
             </div>
             <aside className={s.panel}>
-              <h3>What MnU brings to your restaurant</h3>
+              <h3>What Mr.wiserr brings to your restaurant</h3>
               {([
                 ['zap', 'Faster service', 'Less waiting, happier tables'],
                 ['msg', 'Honest guest voices', 'Know what diners truly feel'],
@@ -133,7 +133,7 @@ export default function Landing() {
             <div>
               <span className={s.pill}>Who we are</span>
               <h2>We help restaurants focus on great food and warm hospitality.</h2>
-              <p>MnU is built for restaurant owners and their teams. We take care of the busywork around the dining experience, so you have more time for your guests and your craft.</p>
+              <p>Mr.wiserr is built for restaurant owners and their teams. We take care of the busywork around the dining experience, so you have more time for your guests and your craft.</p>
               <ul className={s.list}>
                 {['Designed for restaurants of every size', 'Easy for your team, comfortable for your guests', 'Built to grow alongside your business'].map((t) => (
                   <li key={t}><Icon name="check" className={s.i} />{t}</li>
@@ -160,7 +160,7 @@ export default function Landing() {
         <section id="benefits" className={`${s.section} ${s.alt}`}>
           <div className={s.wrap}>
             <div className={s.head}>
-              <span className={s.pill}>How MnU helps</span>
+              <span className={s.pill}>How Mr.wiserr helps</span>
               <h2>Real benefits for your restaurant</h2>
               <p>Everything we do is aimed at one thing: a better experience for your guests and an easier day for you.</p>
             </div>
@@ -180,8 +180,8 @@ export default function Landing() {
           <div className={`${s.wrap} ${s.grid}`}>
             <div>
               <span className={s.pill}><Icon name="user" className={s.i} />Sign in</span>
-              <h2>Welcome back to MnU</h2>
-              <p className={s.t}>Sign in to your account. New to MnU? Contact our team and we will create your account for you.</p>
+              <h2>Welcome back to Mr.wiserr</h2>
+              <p className={s.t}>Sign in to your account. New to Mr.wiserr? Contact our team and we will create your account for you.</p>
               <ul className={s.list}>
                 {['Quick and simple sign-in', "Accounts are created with our team's help", 'No technical knowledge needed'].map((t) => (
                   <li key={t}><Icon name="check" className={s.i} />{t}</li>
@@ -215,7 +215,7 @@ export default function Landing() {
             <div className={s.head}>
               <span className={s.pill}>Contact us</span>
               <h2>Create your account with our team</h2>
-              <p>To create your MnU account, call or email us. We are happy to help.</p>
+              <p>To create your Mr.wiserr account, call or email us. We are happy to help.</p>
             </div>
             <div className={s.cards}>
               <article className={s.card}>
@@ -240,11 +240,10 @@ export default function Landing() {
 
       <footer className={s.footer}>
         <div className={`${s.wrap} ${s.nav}`}>
-          <a href="#top" className={s.logo} style={{ fontSize: '1.1rem' }}>
-            <Image src="/mnu-logo.png" alt="" width={300} height={164} style={{ height: 28, width: 'auto' }} />
-            <span>MnU</span>
+          <a href="#top" className={s.logo} aria-label="Mr.wiserr home">
+            <BrandWordmark className="text-2xl" />
           </a>
-          <span>© {new Date().getFullYear()} MnU. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Mr.wiserr. All rights reserved.</span>
         </div>
       </footer>
     </div>
