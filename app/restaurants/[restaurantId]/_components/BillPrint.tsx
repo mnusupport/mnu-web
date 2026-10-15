@@ -1,11 +1,12 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { billingApi, type RestaurantBillRecord } from '@/lib/api';
+import { billingApi, type AdminOrderRecord, type RestaurantBillRecord } from '@/lib/api';
 import { readAutoPrint, readPrintFormat, writeAutoPrint, writePrintFormat, type PrintFormat } from '@/lib/printPrefs';
 import { BillDocument } from './BillDocument';
+import { KotDocument } from './KotDocument';
 
-interface PrintJob { bill: RestaurantBillRecord; format: PrintFormat }
+type PrintJob = { kind: 'BILL'; bill: RestaurantBillRecord; format: PrintFormat } | { kind: 'KOT'; order: AdminOrderRecord; format: PrintFormat; printedAt: Date };
 
 // Renders the bill into its own root on <body> and opens the browser print dialog. Print CSS (globals.css) hides
 // everything else, so the staff member prints from wherever they are (order board, order detail, bill page).
@@ -28,23 +29,34 @@ function BillPrintPortal({ job, onDone }: { job: PrintJob | null; onDone: () => 
     const failsafe = window.setTimeout(finish, 120_000); // some mobile browsers never fire afterprint
     return () => { clearTimeout(start); clearTimeout(failsafe); window.removeEventListener('afterprint', finish); style.remove(); };
   }, [root, job]);
-  return root && job ? createPortal(<BillDocument bill={job.bill} format={job.format} />, root) : null;
+  return root && job ? createPortal(job.kind === 'KOT' ? <KotDocument order={job.order} format={job.format} printedAt={job.printedAt} /> : <BillDocument bill={job.bill} format={job.format} />, root) : null;
 }
 
-export function usePrintBill(restaurantId: string): { print: (source: string | RestaurantBillRecord) => Promise<void>; busy: boolean; error: string | null; portal: ReactNode } {
+export function usePrintBill(restaurantId: string): { print: (source: string | RestaurantBillRecord) => Promise<void>; printKot: (order: AdminOrderRecord) => void; busy: boolean; error: string | null; portal: ReactNode } {
   const [job, setJob] = useState<PrintJob | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const print = useCallback(async (source: string | RestaurantBillRecord) => {
+    if (jobRef.current) return;
     setError(null); setBusy(true);
     try {
       // Always print the SAVED bill from the server (never a recomputed one); reprinting never creates or edits a bill.
       const bill = typeof source === 'string' ? await billingApi.get(restaurantId, source) : source;
-      setJob({ bill, format: readPrintFormat() });
+      setJob({ kind: 'BILL', bill, format: readPrintFormat() });
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not load the bill to print.'); } finally { setBusy(false); }
   }, [restaurantId]);
+  // One print job at a time: while a dialog is open (or opening) further clicks, rerenders and retries are ignored,
+  // so a KOT can never be sent twice by a double tap. Printing only READS the order; it makes no API call, creates
+  // no order/bill and never touches payment state, so a failed print cannot affect an accepted order.
+  const jobRef = useRef<PrintJob | null>(null);
+  jobRef.current = job;
+  const printKot = useCallback((order: AdminOrderRecord) => {
+    if (jobRef.current) return;
+    setError(null);
+    setJob({ kind: 'KOT', order, format: readPrintFormat(), printedAt: new Date() });
+  }, []);
   const portal = <BillPrintPortal job={job} onDone={() => setJob(null)} />;
-  return { print, busy, error, portal };
+  return { print, printKot, busy, error, portal };
 }
 
 /** Per-device print settings: paper size and whether to open the print dialog as soon as an order is marked Ready. */

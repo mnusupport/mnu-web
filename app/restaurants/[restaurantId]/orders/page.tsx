@@ -23,7 +23,10 @@ export default function RestaurantOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('ACTIVE');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
-  const { print, busy: printBusy, error: printError, portal } = usePrintBill(restaurantId);
+  const { print, printKot, busy: printBusy, error: printError, portal } = usePrintBill(restaurantId);
+  // Set only by a successful NEW→accepted transition in this session; dismissing it never affects the order.
+  const [kotPromptId, setKotPromptId] = useState<string | null>(null);
+  const kotPromptOrder = kotPromptId ? orders?.find((o) => o.id === kotPromptId) ?? null : null;
 
   const nextAction: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {
     NEW: { status: 'PREPARING', label: 'Accept & Start Preparing' },
@@ -40,6 +43,7 @@ export default function RestaurantOrdersPage() {
     try {
       const updated = await ordersApi.updateStatus(restaurantId, order.id, action.status);
       setOrders((current) => current?.map((item) => item.id === updated.id ? updated : item) ?? [updated]);
+      if (order.status === 'NEW' && (action.status === 'PREPARING' || action.status === 'CONFIRMED')) setKotPromptId(updated.id);
       // Ready: the bill is saved by the server. If it could not be created (e.g. incomplete billing settings) say so
       // clearly — the order still moved on, and the bill can be retried below or from the order page.
       if (updated.billError) setError(`${updated.orderNumber} is Ready, but its bill was not generated: ${updated.billError}`);
@@ -85,6 +89,13 @@ export default function RestaurantOrdersPage() {
       </div>
 
       {portal}
+      {kotPromptOrder && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-brand-600 bg-white p-3" role="status">
+        <span className="text-sm font-semibold text-ink-900">Order {kotPromptOrder.orderNumber} accepted. Print the kitchen ticket?</span>
+        <span className="flex gap-2">
+          <button type="button" onClick={() => printKot(kotPromptOrder)} disabled={printBusy} className="min-h-10 rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Print KOT</button>
+          <button type="button" onClick={() => setKotPromptId(null)} className="min-h-10 rounded-lg border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700">Not now</button>
+        </span>
+      </div>}
       {(error || printError) && <div className="mnu-admin-alert" role="alert">{error || printError}</div>}
       {!orders && !error && <div className="mnu-admin-panel p-8 text-center text-xs text-ink-400">Loading live orders…</div>}
 
@@ -112,6 +123,10 @@ export default function RestaurantOrdersPage() {
                 <span className="text-xs text-amber-700">Bill not generated yet</span>
                 <button type="button" onClick={() => void generateFor(order)} disabled={updatingOrderId !== null} className="min-h-10 rounded-lg border border-brand-600 bg-white px-4 py-2 text-xs font-bold text-brand-700 disabled:opacity-50">Generate bill</button>
               </>}
+            </div>}
+            {order.status !== 'NEW' && order.status !== 'CANCELLED' && <div className="mt-3 flex items-center justify-between gap-2">
+              <span className="text-xs text-ink-500">Kitchen ticket (no prices)</span>
+              <button type="button" onClick={() => printKot(order)} className="min-h-10 rounded-lg border border-ink-800 bg-white px-4 py-2 text-xs font-bold text-ink-900">Print KOT</button>
             </div>}
             {nextAction[order.status] && <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink-100 pt-3">
               <span className="text-xs text-ink-400">Next: {nextAction[order.status]?.label}</span>

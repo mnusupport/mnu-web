@@ -31,7 +31,8 @@ export default function OrderDetailPage() {
   const [billBusy, setBillBusy] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<BillPaymentMethod>('CASH');
   const [billMessage, setBillMessage] = useState<string | null>(null);
-  const { print, busy: printBusy, error: printError, portal } = usePrintBill(restaurantId);
+  const { print, printKot, busy: printBusy, error: printError, portal } = usePrintBill(restaurantId);
+  const [kotPrompt, setKotPrompt] = useState(false);
 
   useEffect(() => {
     ordersApi
@@ -68,8 +69,10 @@ export default function OrderDetailPage() {
     setError(null);
     setUpdating(next);
     try {
+      const wasNew = order?.status === 'NEW';
       const updated = await ordersApi.updateStatus(restaurantId, orderId, next);
       setOrder(updated);
+      if (wasNew && (next === 'PREPARING' || next === 'CONFIRMED')) setKotPrompt(true);
       setBillMessage(updated.billError ?? null);
       if (next === 'READY' || next === 'CANCELLED') await refreshBill();
       // The bill is saved first; printing is only an optional follow-up that opens the browser print dialog.
@@ -147,8 +150,16 @@ export default function OrderDetailPage() {
           {/* Status is advanced by tapping the next step on the timeline
               (only transitions OrdersService.updateStatus accepts are
               tappable). The server response is the source of truth. */}
+          {kotPrompt && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-brand-600 bg-white p-3" role="status">
+            <span className="text-sm font-semibold text-ink-900">Order accepted. Print the kitchen ticket?</span>
+            <span className="flex gap-2">
+              <button type="button" onClick={() => printKot(order)} disabled={printBusy} className="min-h-10 rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Print KOT</button>
+              <button type="button" onClick={() => setKotPrompt(false)} className="min-h-10 rounded-lg border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700">Not now</button>
+            </span>
+          </div>}
           <OrderStatusStepper status={order.status} updating={updating} onChange={changeStatus} />
 
+          {order.status !== 'NEW' && order.status !== 'CANCELLED' && <div className="mt-4"><button type="button" onClick={() => printKot(order)} className="min-h-11 rounded-xl border-2 border-ink-800 bg-white px-5 py-2.5 text-sm font-bold text-ink-900">Print KOT (kitchen ticket)</button><span className="ml-3 text-xs text-ink-400">Opens the print dialog; contains no prices or payment details.</span></div>}
           <div className="mt-5 divide-y divide-ink-100 rounded-2xl border border-ink-100 bg-white">
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center justify-between gap-3 p-4">
